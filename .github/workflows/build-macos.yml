@@ -138,13 +138,13 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Download Swift binary
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: mcp-server-macos-use-binary
           path: vendor/mcp-server-macos-use/.build/release/
 
       - name: Download Python venv
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: python-venv
           path: .
@@ -229,7 +229,7 @@ jobs:
     needs: build-electron-app
     steps:
       - name: Download DMG
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: AtlasTrinity-macOS-${{ github.sha }}
           path: ./artifacts
