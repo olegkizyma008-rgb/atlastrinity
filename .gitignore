@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+.venv/
+package-lock.json
+
+# Build output
+dist/
+release/
+dist_venv/
+*.dmg
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+
+# Logs
+logs/
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# macOS
+.DS_Store
+*.app
+
+# Models and Weights
+model.pth
+*.pth
+*.npz
+*.ark
+spk_xvector.ark
+feats_stats.npz
+
+# Whisper models cache
+~/.cache/whisper/
+
+# ChromaDB data
+data/chroma/
+
+# Swift
+.build/
+.swiftpm/
+DerivedData/
+**/Package.resolved
+**/vendor/mcp-server-macos-use/.build/

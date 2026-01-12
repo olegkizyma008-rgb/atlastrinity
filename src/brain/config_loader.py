@@ -1,0 +1,209 @@
+import json
+import os
+import shutil
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+import yaml
+
+try:
+    from dotenv import dotenv_values
+except ImportError:  # pragma: no cover
+
+    def dotenv_values(*args, **kwargs):
+        return {}
+
+
+from .config import CONFIG_ROOT, MCP_DIR, PROJECT_ROOT
+
+
+def deep_merge(base: Dict, overlay: Dict) -> Dict:
+    """Recursively merge overlay into base."""
+    result = base.copy()
+    for key, value in overlay.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+
+class SystemConfig:
+    """Singleton for system configuration with synchronization logic."""
+
+    _instance = None
+    _config: Dict[str, Any] = {}
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._sync_configs()
+            cls._instance._load_config()
+        return cls._instance
+
+    def _sync_configs(self):
+        """
+        Setup global configuration and apply .env secrets.
+        Configuration is used EXCLUSIVELY from global location.
+        """
+        global_path = CONFIG_ROOT / "config.yaml"
+        env_path = CONFIG_ROOT / ".env"  # Use ONLY global .env
+        mcp_global = MCP_DIR / "config.json"
+
+        CONFIG_ROOT.mkdir(parents=True, exist_ok=True)
+        MCP_DIR.mkdir(parents=True, exist_ok=True)
+
+        # 1. Ensure global config.yaml exists
+        if not global_path.exists():
+            # Seed from bundled template if available; otherwise generate defaults
+            template_yaml = PROJECT_ROOT / "config" / "config.yaml"
+            if template_yaml.exists():
+                shutil.copy2(template_yaml, global_path)
+            else:
+                with open(global_path, "w", encoding="utf-8") as f:
+                    yaml.dump(
+                        self._get_defaults(),
+                        f,
+                        default_flow_style=False,
+                        allow_unicode=True,
+                    )
+
+        # 1b. Ensure global MCP config.json exists (and is synced from bundled template)
+        try:
+            template_mcp = PROJECT_ROOT / "src" / "mcp_server" / "config.json"
+            if template_mcp.exists():
+                if not mcp_global.exists():
+                    shutil.copy2(template_mcp, mcp_global)
+                else:
+                    with open(template_mcp, "r", encoding="utf-8") as f:
+                        template_data = json.load(f) or {}
+                    with open(mcp_global, "r", encoding="utf-8") as f:
+                        user_data = json.load(f) or {}
+                    merged = deep_merge(template_data, user_data)
+                    if merged != user_data:
+                        backup_path = mcp_global.with_suffix(".json.backup")
+                        shutil.copy2(mcp_global, backup_path)
+                        with open(mcp_global, "w", encoding="utf-8") as f:
+                            json.dump(merged, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+
+        # 2. Load .env secrets into process environment (do NOT rewrite config.yaml)
+        if env_path.exists():
+            env_vars = dotenv_values(env_path)
+            for key, value in (env_vars or {}).items():
+                if value is None:
+                    continue
+                if os.environ.get(key) != value:
+                    os.environ[key] = value
+
+    def _load_config(self):
+        """Loads configuration exclusively from the global system folder."""
+        config_path = CONFIG_ROOT / "config.yaml"
+        if not config_path.exists():
+            self._config = self._get_defaults()
+            return
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                loaded = yaml.safe_load(f) or {}
+                self._config = deep_merge(self._get_defaults(), loaded)
+        except Exception:
+            self._config = self._get_defaults()
+
+    def _get_defaults(self) -> Dict[str, Any]:
+        """Default configuration with fallback to environment variables."""
+        base_defaults = {
+            "agents": {
+                "atlas": {
+                    "model": os.getenv("COPILOT_MODEL", "raptor-mini"),
+                    "temperature": 0.7,
+                    "max_tokens": 2000,
+                },
+                "tetyana": {
+                    "model": os.getenv("COPILOT_MODEL", "gpt-4o"),
+                    "temperature": 0.5,
+                    "max_tokens": 2000,
+                },
+                "grisha": {
+                    "vision_model": os.getenv("VISION_MODEL", "gpt-4o"),
+                    "temperature": 0.3,
+                    "max_tokens": 1500,
+                },
+            },
+            "orchestrator": {
+                "max_recursion_depth": 5,
+                "task_timeout": 300,
+                "subtask_timeout": 120,
+            },
+            "mcp": {
+                "terminal": {"enabled": True},
+                "filesystem": {"enabled": True},
+                "computer_use": {"enabled": True},
+            },
+            "security": {
+                "dangerous_commands": ["rm -rf", "mkfs"],
+                "require_confirmation": True,
+            },
+            "voice": {
+                "tts": {
+                    "engine": os.getenv("TTS_ENGINE", "ukrainian-tts"),
+                    "device": "mps",
+                },
+                "stt": {
+                    "model": os.getenv("STT_MODEL", "large-v3-turbo"),
+                    "language": "uk",
+                },
+            },
+            "logging": {"level": "INFO", "max_log_size": 10485760, "backup_count": 5},
+        }
+
+        template_yaml = PROJECT_ROOT / "config" / "config.yaml"
+        if template_yaml.exists():
+            try:
+                with open(template_yaml, "r", encoding="utf-8") as f:
+                    template = yaml.safe_load(f) or {}
+                return deep_merge(base_defaults, template)
+            except Exception:
+                return base_defaults
+
+        return base_defaults
+
+    def get(self, key_path: str, default: Any = None) -> Any:
+        keys = key_path.split(".")
+        value = self._config
+        for key in keys:
+            if isinstance(value, dict) and key in value:
+                value = value[key]
+            else:
+                return default
+        return value
+
+    def get_api_key(self, key_name: str) -> str:
+        env_map = {
+            "copilot_api_key": "COPILOT_API_KEY",
+            "github_token": "GITHUB_TOKEN",
+            "openai_api_key": "OPENAI_API_KEY",
+        }
+
+        env_var = env_map.get(key_name)
+        if env_var:
+            val = os.getenv(env_var)
+            if val:
+                return val
+
+        return self.get(f"api.{key_name}", "")
+
+    def get_agent_config(self, agent_name: str) -> Dict[str, Any]:
+        """Returns specific agent configuration."""
+        return self.get(f"agents.{agent_name}", {})
+
+    def get_security_config(self) -> Dict[str, Any]:
+        """Returns security configuration."""
+        return self.get("security", {})
+
+    @property
+    def all(self) -> Dict[str, Any]:
+        return self._config
+
+
+config = SystemConfig()

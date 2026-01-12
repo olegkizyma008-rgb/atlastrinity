@@ -1,0 +1,341 @@
+"""
+AtlasTrinity Long-Term Memory
+
+ChromaDB-based vector memory for storing:
+- Lessons learned from errors
+- Successful strategies
+- Task patterns
+
+This enables the system to learn from past experience.
+"""
+
+import json
+import os
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+try:
+    import chromadb
+    from chromadb.config import Settings
+
+    CHROMADB_AVAILABLE = True
+except ImportError:
+    CHROMADB_AVAILABLE = False
+
+from .config import CONFIG_ROOT, MEMORY_DIR
+from .logger import logger
+
+# ChromaDB storage path - use subfolder of legacy MEMORY_DIR or CONFIG_ROOT
+CHROMA_DIR = os.path.join(CONFIG_ROOT, "chromadb")
+
+
+class LongTermMemory:
+    """
+    Manages long-term vector memory using ChromaDB.
+
+    Collections:
+    - lessons: Error patterns and their solutions
+    - strategies: Successful task strategies
+    - context: Task context and outcomes
+    """
+
+    def __init__(self):
+        if not CHROMADB_AVAILABLE:
+            logger.warning(
+                "[MEMORY] ChromaDB not installed. Running without long-term memory."
+            )
+            self.available = False
+            return
+
+        os.makedirs(CHROMA_DIR, exist_ok=True)
+
+        try:
+            self.client = chromadb.PersistentClient(path=CHROMA_DIR)
+
+            # Initialize collections
+            self.lessons = self.client.get_or_create_collection(
+                name="lessons", metadata={"description": "Error patterns and solutions"}
+            )
+
+            self.strategies = self.client.get_or_create_collection(
+                name="strategies",
+                metadata={"description": "Successful task execution strategies"},
+            )
+
+            self.knowledge = self.client.get_or_create_collection(
+                name="knowledge_graph_nodes",
+                metadata={"description": "Semantic embedding of Knowledge Graph nodes"},
+            )
+
+            self.available = True
+            logger.info(f"[MEMORY] ChromaDB initialized at {CHROMA_DIR}")
+            logger.info(
+                f"[MEMORY] Lessons: {self.lessons.count()} | Strategies: {self.strategies.count()}"
+            )
+
+        except Exception as e:
+            logger.error(f"[MEMORY] Failed to initialize ChromaDB: {e}")
+            self.available = False
+
+    def remember_error(
+        self,
+        error: str,
+        solution: str,
+        context: Dict[str, Any],
+        task_description: str = "",
+    ) -> bool:
+        """
+        Store an error pattern with its solution.
+
+        Args:
+            error: The error message or description
+            solution: How the error was resolved
+            context: Additional context (step, tool, path, etc.)
+            task_description: What task was being attempted
+        """
+        if not self.available:
+            return False
+
+        try:
+            doc_id = f"lesson_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{hash(error) % 10000}"
+
+            # Create document text for embedding
+            document = f"Error: {error}\nSolution: {solution}\nTask: {task_description}"
+
+            # Metadata for filtering
+            metadata = {
+                "error_type": (
+                    type(error).__name__ if hasattr(error, "__name__") else "string"
+                ),
+                "timestamp": datetime.now().isoformat(),
+                "tool": context.get("tool", ""),
+                "step_id": str(context.get("step_id", "")),
+                "success": context.get("success", False),
+            }
+
+            self.lessons.upsert(
+                ids=[doc_id], documents=[document], metadatas=[metadata]
+            )
+
+            logger.info(f"[MEMORY] Stored lesson: {doc_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"[MEMORY] Failed to store lesson: {e}")
+            return False
+
+    def remember_strategy(
+        self, task: str, plan_steps: List[str], outcome: str, success: bool
+    ) -> bool:
+        """
+        Store a task execution strategy.
+
+        Args:
+            task: Task description
+            plan_steps: List of steps taken
+            outcome: Final result
+            success: Whether the strategy worked
+        """
+        if not self.available:
+            return False
+
+        try:
+            doc_id = f"strategy_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{hash(task) % 10000}"
+
+            # Create document text
+            steps_text = "\n".join([f"{i+1}. {s}" for i, s in enumerate(plan_steps)])
+            document = f"Task: {task}\n\nSteps:\n{steps_text}\n\nOutcome: {outcome}"
+
+            metadata = {
+                "timestamp": datetime.now().isoformat(),
+                "success": success,
+                "steps_count": len(plan_steps),
+            }
+
+            self.strategies.upsert(
+                ids=[doc_id], documents=[document], metadatas=[metadata]
+            )
+
+            logger.info(f"[MEMORY] Stored strategy: {doc_id} (success={success})")
+            return True
+
+        except Exception as e:
+            logger.error(f"[MEMORY] Failed to store strategy: {e}")
+            return False
+
+    def recall_similar_errors(
+        self, error: str, n_results: int = 3
+    ) -> List[Dict[str, Any]]:
+        """
+        Find similar past errors and their solutions.
+
+        Args:
+            error: Current error to find similar cases for
+            n_results: Number of results to return
+
+        Returns:
+            List of dicts with {document, metadata, distance}
+        """
+        if not self.available or self.lessons.count() == 0:
+            return []
+
+        try:
+            results = self.lessons.query(
+                query_texts=[error],
+                n_results=min(n_results, self.lessons.count()),
+                include=["documents", "metadatas", "distances"],
+            )
+
+            similar = []
+            if results and results["documents"]:
+                for i, doc in enumerate(results["documents"][0]):
+                    similar.append(
+                        {
+                            "document": doc,
+                            "metadata": (
+                                results["metadatas"][0][i]
+                                if results["metadatas"]
+                                else {}
+                            ),
+                            "distance": (
+                                results["distances"][0][i]
+                                if results["distances"]
+                                else 1.0
+                            ),
+                        }
+                    )
+
+            logger.info(f"[MEMORY] Found {len(similar)} similar errors")
+            return similar
+
+        except Exception as e:
+            logger.error(f"[MEMORY] Failed to recall errors: {e}")
+            return []
+
+    def recall_similar_tasks(
+        self, task: str, n_results: int = 3, only_successful: bool = True
+    ) -> List[Dict[str, Any]]:
+        """
+        Find similar past tasks and their strategies.
+
+        Args:
+            task: Current task description
+            n_results: Number of results to return
+            only_successful: Only return successful strategies
+
+        Returns:
+            List of dicts with {document, metadata, distance}
+        """
+        if not self.available or self.strategies.count() == 0:
+            return []
+
+        try:
+            where_filter = {"success": True} if only_successful else None
+
+            results = self.strategies.query(
+                query_texts=[task],
+                n_results=min(n_results, self.strategies.count()),
+                include=["documents", "metadatas", "distances"],
+                where=where_filter,
+            )
+
+            similar = []
+            if results and results["documents"]:
+                for i, doc in enumerate(results["documents"][0]):
+                    similar.append(
+                        {
+                            "document": doc,
+                            "metadata": (
+                                results["metadatas"][0][i]
+                                if results["metadatas"]
+                                else {}
+                            ),
+                            "distance": (
+                                results["distances"][0][i]
+                                if results["distances"]
+                                else 1.0
+                            ),
+                        }
+                    )
+
+            logger.info(f"[MEMORY] Found {len(similar)} similar tasks")
+            return similar
+
+        except Exception as e:
+            logger.error(f"[MEMORY] Failed to recall tasks: {e}")
+            return []
+
+    def add_knowledge_node(
+        self, node_id: str, text: str, metadata: Dict[str, Any]
+    ) -> bool:
+        """Add a knowledge graph node to vector store."""
+        if not self.available:
+            return False
+
+        try:
+            self.knowledge.upsert(ids=[node_id], documents=[text], metadatas=[metadata])
+            logger.info(f"[MEMORY] Added knowledge node: {node_id}")
+            return True
+        except Exception as e:
+            logger.error(f"[MEMORY] Failed to add knowledge node: {e}")
+            return False
+
+    def get_stats(self) -> Dict[str, Any]:
+        """Get memory statistics."""
+        if not self.available:
+            return {"available": False}
+
+        return {
+            "available": True,
+            "lessons_count": self.lessons.count(),
+            "strategies_count": self.strategies.count(),
+            "path": CHROMA_DIR,
+        }
+
+    def consolidate(self, logs: List[Dict[str, Any]], llm_summarizer=None) -> int:
+        """
+        Consolidate logs into lessons (for nightly processing).
+
+        Args:
+            logs: List of log entries with error/success data
+            llm_summarizer: Optional LLM for generating summaries
+
+        Returns:
+            Number of new lessons created
+        """
+        if not self.available:
+            return 0
+
+        new_lessons = 0
+
+        # Group errors by similarity
+        errors = [
+            log
+            for log in logs
+            if log.get("type") == "error" or log.get("success") is False
+        ]
+
+        for error_log in errors:
+            # Check if we already have this lesson
+            existing = self.recall_similar_errors(
+                error_log.get("error", str(error_log)), n_results=1
+            )
+
+            # Only add if not too similar
+            if not existing or existing[0].get("distance", 1.0) > 0.1:
+                self.remember_error(
+                    error=error_log.get("error", str(error_log)),
+                    solution=error_log.get("solution", "Unknown"),
+                    context=error_log,
+                    task_description=error_log.get("task", ""),
+                )
+                new_lessons += 1
+
+        logger.info(
+            f"[MEMORY] Consolidated {new_lessons} new lessons from {len(logs)} logs"
+        )
+        return new_lessons
+
+
+# Singleton instance
+long_term_memory = LongTermMemory()

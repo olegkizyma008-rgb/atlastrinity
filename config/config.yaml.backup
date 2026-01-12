@@ -1,0 +1,75 @@
+agents:
+  grisha:
+    temperature: 0.3
+    max_tokens: 1500
+    vision_model: gpt-4o
+  tetyana:
+    temperature: 0.5
+    max_tokens: 2000
+    model: gpt-4.1
+  atlas:
+    temperature: 0.7
+    max_tokens: 2000
+    model: raptor-mini
+logging:
+  backup_count: 5
+  max_log_size: 10485760
+  level: INFO
+orchestrator:
+  task_timeout: 300
+  max_recursion_depth: 5
+  subtask_timeout: 120
+mcp:
+  whisper:
+    language: uk
+    enabled: true
+    model: large-v3-turbo
+
+
+  terminal:
+    max_command_length: 1000
+    command_timeout: 60
+    enabled: true
+    model: gpt-4o
+
+  sequential_thinking:
+    enabled: true
+    max_history_size: 1000
+  duckduckgo_search:
+    enabled: true
+  github:
+    enabled: true
+  memory:
+    enabled: true
+  time:
+    enabled: true
+  git:
+    enabled: true
+  fetch:
+    enabled: true
+
+
+  context7:
+    enabled: true
+  docker:
+    enabled: true
+  postgres:
+    enabled: true
+  slack:
+    enabled: true
+security:
+  require_confirmation: true
+  dangerous_commands:
+  - rm -rf
+  - mkfs
+  - dd if=
+  - ':(){ :|:& };:'
+voice:
+  stt:
+    language: uk
+    model: large-v3-turbo
+    device: mps
+  tts:
+    enabled: true
+    engine: ukrainian-tts
+    device: mps

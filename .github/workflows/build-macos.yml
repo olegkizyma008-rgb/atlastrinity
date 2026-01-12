@@ -1,0 +1,291 @@
+name: Build macOS App
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      sign_app:
+        description: 'Sign and notarize the app'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  PYTHON_VERSION: '3.12'
+  NODE_VERSION: '22'
+
+jobs:
+  # ============================================
+  # Swift Binary Compilation
+  # ============================================
+  
+  build-swift-binary:
+    name: Build Swift MCP Server
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Swift
+        uses: swift-actions/setup-swift@v1
+        with:
+          swift-version: '5.9'
+
+      - name: Lint Swift code
+        run: |
+          if command -v swiftlint &> /dev/null; then
+            swiftlint --config .swiftlint.yml vendor/mcp-server-macos-use/
+          else
+            echo "SwiftLint not installed, skipping..."
+          fi
+        continue-on-error: true
+
+      - name: Build mcp-server-macos-use
+        run: |
+          cd vendor/mcp-server-macos-use
+          swift build -c release --arch arm64
+          ls -lah .build/release/
+          file .build/release/mcp-server-macos-use
+
+      - name: Verify binary architecture
+        run: |
+          lipo -info vendor/mcp-server-macos-use/.build/release/mcp-server-macos-use
+
+      - name: Upload Swift binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcp-server-macos-use-binary
+          path: vendor/mcp-server-macos-use/.build/release/mcp-server-macos-use
+          retention-days: 7
+
+  # ============================================
+  # Python Virtual Environment
+  # ============================================
+  
+  build-python-venv:
+    name: Build Python Virtual Environment
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Create production venv
+        run: |
+          python3 -m venv dist_venv
+          source dist_venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          
+          # Clean up unnecessary files
+          find dist_venv -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+          find dist_venv -type f -name "*.pyc" -delete
+          find dist_venv -type f -name "*.pyo" -delete
+
+      - name: Verify Python packages
+        run: |
+          source dist_venv/bin/activate
+          pip list
+          python -c "import langgraph; import langchain; import fastapi; print('✅ Core packages verified')"
+
+      - name: Package venv
+        run: |
+          tar -czf dist_venv.tar.gz dist_venv/
+
+      - name: Upload Python venv
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-venv
+          path: dist_venv.tar.gz
+          retention-days: 7
+
+  # ============================================
+  # Electron App Build
+  # ============================================
+  
+  build-electron-app:
+    name: Build Electron Application
+    runs-on: macos-latest
+    needs: [build-swift-binary, build-python-venv]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Download Swift binary
+        uses: actions/download-artifact@v4
+        with:
+          name: mcp-server-macos-use-binary
+          path: vendor/mcp-server-macos-use/.build/release/
+
+      - name: Download Python venv
+        uses: actions/download-artifact@v4
+        with:
+          name: python-venv
+          path: .
+
+      - name: Extract Python venv
+        run: |
+          tar -xzf dist_venv.tar.gz
+          rm dist_venv.tar.gz
+
+      - name: Make binaries executable
+        run: |
+          chmod +x vendor/mcp-server-macos-use/.build/release/mcp-server-macos-use
+          chmod +x dist_venv/bin/python*
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build TypeScript
+        run: |
+          npm run build:renderer
+          npm run build:electron
+
+      - name: Prepare app icon
+        run: |
+          if [ ! -f build/icon.icns ]; then
+            echo "Converting PNG to ICNS..."
+            python scripts/process_icon.py
+          fi
+
+      - name: Build Electron app (unsigned)
+        if: "!inputs.sign_app"
+        run: |
+          npm run build:dmg
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Build Electron app (signed)
+        if: inputs.sign_app
+        run: |
+          npm run build:dmg
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+
+      - name: Verify DMG creation
+        run: |
+          ls -lah release/
+          if [ -f release/*.dmg ]; then
+            echo "✅ DMG created successfully"
+            hdiutil info release/*.dmg || true
+          else
+            echo "❌ DMG not found"
+            exit 1
+          fi
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AtlasTrinity-macOS-${{ github.sha }}
+          path: release/*.dmg
+          retention-days: 30
+
+      - name: Upload build logs
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: build-logs
+          path: |
+            npm-debug.log*
+            electron-builder*.log
+
+  # ============================================
+  # Post-Build Validation
+  # ============================================
+  
+  validate-build:
+    name: Validate macOS Build
+    runs-on: macos-latest
+    needs: build-electron-app
+    steps:
+      - name: Download DMG
+        uses: actions/download-artifact@v4
+        with:
+          name: AtlasTrinity-macOS-${{ github.sha }}
+          path: ./artifacts
+
+      - name: Verify DMG structure
+        run: |
+          DMG_PATH=$(ls artifacts/*.dmg | head -1)
+          echo "Verifying: $DMG_PATH"
+          
+          # Mount DMG
+          hdiutil attach "$DMG_PATH" -mountpoint /Volumes/AtlasTrinity -nobrowse
+          
+          # Check app structure
+          ls -la /Volumes/AtlasTrinity/
+          
+          if [ -d "/Volumes/AtlasTrinity/AtlasTrinity.app" ]; then
+            echo "✅ App bundle found"
+            ls -la /Volumes/AtlasTrinity/AtlasTrinity.app/Contents/
+            ls -la /Volumes/AtlasTrinity/AtlasTrinity.app/Contents/Resources/
+          else
+            echo "❌ App bundle not found"
+            exit 1
+          fi
+          
+          # Unmount
+          hdiutil detach /Volumes/AtlasTrinity
+
+      - name: Check code signature (if signed)
+        if: ${{ inputs.sign_app }}
+        run: |
+          DMG_PATH=$(ls artifacts/*.dmg | head -1)
+          hdiutil attach "$DMG_PATH" -mountpoint /Volumes/AtlasTrinity -nobrowse
+          codesign -vv /Volumes/AtlasTrinity/AtlasTrinity.app
+          hdiutil detach /Volumes/AtlasTrinity
+
+  # ============================================
+  # Status Summary
+  # ============================================
+  
+  build-status:
+    name: Build Status Check
+    runs-on: ubuntu-latest
+    needs:
+      - build-swift-binary
+      - build-python-venv
+      - build-electron-app
+      - validate-build
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          if [[ "${{ needs.build-swift-binary.result }}" != "success" ]] || \
+             [[ "${{ needs.build-python-venv.result }}" != "success" ]] || \
+             [[ "${{ needs.build-electron-app.result }}" != "success" ]] || \
+             [[ "${{ needs.validate-build.result }}" != "success" ]]; then
+            echo "❌ Build failed"
+            exit 1
+          fi
+          echo "✅ macOS build completed successfully"

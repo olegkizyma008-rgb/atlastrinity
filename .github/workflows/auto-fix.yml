@@ -1,0 +1,72 @@
+name: Auto Fix & Format
+
+on:
+  push:
+    branches: [main, develop, vibe2]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - '**.json'
+      - '**.py'
+      - '**.ts'
+      - '**.tsx'
+
+jobs:
+  auto-fix:
+    name: Auto Format Code
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install Python formatters
+        run: |
+          pip install black isort
+
+      - name: Install Node formatters
+        run: |
+          npm ci
+
+      - name: Run Python Formatting
+        run: |
+          black src tests scripts --exclude='(dist_venv|node_modules|\.venv)'
+          isort src tests scripts --skip dist_venv --skip node_modules --skip .venv
+
+      - name: Run Prettier
+        run: |
+          npm run format:write
+
+      - name: Check for changes
+        id: git-check
+        run: |
+          git diff --exit-code || echo "changes=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and Push changes
+        if: steps.git-check.outputs.changes == 'true'
+        run: |
+          git config --global user.name 'olegkizyma008-rgb'
+          git config --global user.email 'olegkizyma008-rgb@users.noreply.github.com'
+          git add .
+          git commit -m "[Auto-Fix] Apply code formatting
+          
+          Co-authored-by: olegkizyma008-rgb <olegkizyma008-rgb@users.noreply.github.com>"
+          git push

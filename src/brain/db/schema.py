@@ -1,0 +1,133 @@
+"""
+AtlasTrinity Database Schema
+Uses SQLAlchemy 2.0+ (Async)
+"""
+
+import uuid
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import (JSON, Boolean, DateTime, ForeignKey, Integer, String,
+                        Text)
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+class Session(Base):
+    __tablename__ = "sessions"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    metadata_blob: Mapped[Dict[str, Any]] = mapped_column(JSONB, default={})
+
+    tasks: Mapped[List["Task"]] = relationship(
+        back_populates="session", cascade="all, delete-orphan"
+    )
+
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    session_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sessions.id"))
+
+    goal: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(
+        String(50), default="PENDING"
+    )  # PENDING, RUNNING, COMPLETED, FAILED
+    golden_path: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    session: Mapped["Session"] = relationship(back_populates="tasks")
+    steps: Mapped[List["TaskStep"]] = relationship(
+        back_populates="task", cascade="all, delete-orphan"
+    )
+
+
+class TaskStep(Base):
+    __tablename__ = "task_steps"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    task_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tasks.id"))
+
+    sequence_number: Mapped[int] = mapped_column(Integer)
+    action: Mapped[str] = mapped_column(Text)
+    tool: Mapped[str] = mapped_column(String(100))
+
+    status: Mapped[str] = mapped_column(String(50))  # SUCCESS, FAILED
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    duration_ms: Mapped[int] = mapped_column(Integer, default=0)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    task: Mapped["Task"] = relationship(back_populates="steps")
+    tool_executions: Mapped[List["ToolExecution"]] = relationship(back_populates="step")
+
+
+class ToolExecution(Base):
+    __tablename__ = "tool_executions"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    step_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("task_steps.id"))
+
+    server_name: Mapped[str] = mapped_column(String(100))
+    tool_name: Mapped[str] = mapped_column(String(100))
+    arguments: Mapped[Dict[str, Any]] = mapped_column(JSONB)
+    result: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    step: Mapped["TaskStep"] = relationship(back_populates="tool_executions")
+
+
+class LogEntry(Base):
+    __tablename__ = "logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    level: Mapped[str] = mapped_column(String(20))
+    source: Mapped[str] = mapped_column(String(50))
+    message: Mapped[str] = mapped_column(Text)
+    metadata_blob: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+        JSONB, nullable=True
+    )
+
+
+# Knowledge Graph Nodes (Vertices)
+class KGNode(Base):
+    __tablename__ = "kg_nodes"
+
+    id: Mapped[str] = mapped_column(
+        Text, primary_key=True
+    )  # URI: file://..., task:uuid
+    type: Mapped[str] = mapped_column(String(50))  # FILE, TASK, TOOL, CONCEPT
+    attributes: Mapped[Dict[str, Any]] = mapped_column(JSONB, default={})
+
+    last_updated: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+# Knowledge Graph Edges (Relationships)
+class KGEdge(Base):
+    __tablename__ = "kg_edges"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    source_id: Mapped[str] = mapped_column(ForeignKey("kg_nodes.id"))
+    target_id: Mapped[str] = mapped_column(ForeignKey("kg_nodes.id"))
+    relation: Mapped[str] = mapped_column(String(50))  # CREATED, MODIFIED, READ, USED
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

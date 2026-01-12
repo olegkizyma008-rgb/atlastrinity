@@ -1,0 +1,80 @@
+import os
+import platform
+import sys
+from pathlib import Path
+
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover
+
+    def load_dotenv(*args, **kwargs):
+        return False
+
+
+# Project root (only for import resolution, NOT for configs)
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+
+# Platform check
+IS_MACOS = platform.system() == "Darwin"
+PLATFORM_NAME = platform.system()
+
+# Load environment variables from global .env only
+global_env = Path.home() / ".config" / "atlastrinity" / ".env"
+if global_env.exists():
+    load_dotenv(global_env)
+
+# Disable opt-out telemetry (e.g., ChromaDB, LangChain)
+os.environ["ANONYMIZED_TELEMETRY"] = "False"
+os.environ["CHROMA_TELEMETRY_ENABLED"] = "False"
+os.environ["LANGCHAIN_TRACING_V2"] = "false"
+
+# Centralized data storage for AtlasTrinity on macOS
+# Following XDG standard/developer preference for ~/.config
+CONFIG_ROOT = Path.home() / ".config" / "atlastrinity"
+
+# Subdirectories
+LOG_DIR = CONFIG_ROOT / "logs"
+MEMORY_DIR = CONFIG_ROOT / "memory"
+SCREENSHOTS_DIR = CONFIG_ROOT / "screenshots"
+MODELS_DIR = CONFIG_ROOT / "models" / "tts"
+WHISPER_DIR = CONFIG_ROOT / "models" / "faster-whisper"
+MCP_DIR = CONFIG_ROOT / "mcp"
+WORKSPACE_DIR = CONFIG_ROOT / "workspace"
+
+
+def ensure_dirs():
+    """Ensure all required data directories exist and set global workspace permissions"""
+    for d in [
+        CONFIG_ROOT,
+        LOG_DIR,
+        MEMORY_DIR,
+        SCREENSHOTS_DIR,
+        MODELS_DIR,
+        WHISPER_DIR,
+        MCP_DIR,
+    ]:
+        d.mkdir(parents=True, exist_ok=True)
+
+    # Special handling for Workspace: Create and set 777 permissions
+    if not WORKSPACE_DIR.exists():
+        WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
+
+    try:
+        # Set 777 permissions (rwxrwxrwx) to allow full access for all users/agents
+        os.chmod(WORKSPACE_DIR, 0o777)
+    except Exception as e:
+        print(f"Warning: Failed to set 777 permissions on workspace: {e}")
+
+
+# Initialize directories on import to ensure they exist for logger/agents
+ensure_dirs()
+
+
+def get_log_path(name: str) -> Path:
+    """Get full path for a log file"""
+    return LOG_DIR / f"{name}.log"
+
+
+def get_screenshot_path(filename: str) -> str:
+    """Get full path for a screenshot (string for compatibility with tools)"""
+    return str(SCREENSHOTS_DIR / filename)

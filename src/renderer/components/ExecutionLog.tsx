@@ -1,0 +1,103 @@
+/**
+ * ExecutionLog - Left panel log display
+ * Cyberpunk Terminal Style
+ */
+
+import React, { useRef, useEffect } from 'react';
+
+type AgentName = 'ATLAS' | 'TETYANA' | 'GRISHA' | 'SYSTEM' | 'USER';
+
+interface LogEntry {
+  id: string;
+  timestamp: Date;
+  agent: AgentName;
+  message: string;
+  type: 'info' | 'action' | 'success' | 'error' | 'voice';
+}
+
+interface ExecutionLogProps {
+  logs: LogEntry[];
+}
+
+const ExecutionLog: React.FC<ExecutionLogProps> = ({ logs }) => {
+  // Filter out noisy connection logs
+  const filteredLogs = logs.filter(log =>
+    !log.message.includes("GET /api/state") &&
+    !log.message.includes("POST /api/chat")
+  );
+
+  const logsEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [filteredLogs]);
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('uk-UA', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+  };
+
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden font-mono">
+      {/* Window Header - Decorative Controls */}
+      <div className="flex items-center gap-1.5 px-1 py-4 opacity-30 shrink-0">
+        <div className="flex gap-1.5">
+          <div className="w-[5px] h-[5px] rounded-full bg-[#FF5F56]/40"></div>
+          <div className="w-[5px] h-[5px] rounded-full bg-[#FFBD2E]/40"></div>
+          <div className="w-[5px] h-[5px] rounded-full bg-[#27C93F]/40"></div>
+        </div>
+        <div className="w-[1px] h-2 bg-white/10 mx-2"></div>
+        <span className="text-[6px] tracking-[0.4em] uppercase font-bold text-white/50">core::log_stream</span>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-1 scrollbar-thin">
+        {filteredLogs.map((log) => (
+          <div key={log.id} className="flex flex-col mb-2 animate-fade-in group hover:bg-white/5 px-1 py-1 rounded transition-colors">
+            <div className="flex items-center mb-1">
+              <div className="flex items-center gap-4 filter grayscale opacity-20 group-hover:grayscale-0 group-hover:opacity-40 transition-all duration-500">
+                <span className="text-[6.5px] font-medium tracking-[0.2em] uppercase"
+                  style={{ color: log.agent === 'GRISHA' ? 'var(--grisha-orange)' : log.agent === 'TETYANA' ? 'var(--tetyana-green)' : log.agent === 'USER' ? '#FFFFFF' : 'var(--atlas-blue)', fontFamily: 'Outfit' }}>
+                  {log.agent}
+                </span>
+
+                <div className="flex items-center gap-3 text-[6.5px] font-mono font-medium tracking-[0.05em] uppercase"
+                  style={{ color: log.agent === 'GRISHA' ? 'var(--grisha-orange)' : log.agent === 'TETYANA' ? 'var(--tetyana-green)' : log.agent === 'USER' ? '#FFFFFF' : 'var(--atlas-blue)' }}>
+                  <span className="tracking-tighter">{formatTime(log.timestamp)}</span>
+                  <span className="font-bold">{log.type.toUpperCase()}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Content Row */}
+            <div className="flex-1 flex flex-col pl-0.5">
+              {/* Message */}
+              <span className="text-[8.5px] font-light leading-relaxed break-words text-white/50 group-hover:text-white/85 transition-colors font-mono" style={{ fontFamily: 'JetBrains Mono' }}>
+                {typeof log.message === 'object' ? JSON.stringify(log.message) : log.message}
+              </span>
+            </div>
+          </div>
+        ))}
+
+        <div ref={logsEndRef} />
+
+        {logs.length === 0 && (
+          <div className="h-full flex flex-col items-center justify-center opacity-10 text-[9px] gap-2 tracking-[0.4em] uppercase">
+            <div className="w-10 h-10 rounded-full border border-current animate-spin-slow opacity-20"></div>
+            <span>System Initialized</span>
+            <span>Awaiting Core Link...</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default ExecutionLog;

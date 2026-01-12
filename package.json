@@ -1,0 +1,153 @@
+{
+  "name": "atlastrinity",
+  "version": "1.0.0",
+  "description": "Autonomous Recursive Agentic System for macOS",
+  "main": "dist/main/main.js",
+  "scripts": {
+    "setup": "python3 scripts/setup_dev.py",
+    "clean": "./scripts/clean-cache.sh",
+    "dev": "npm run clean && concurrently \"npm run dev:brain\" \"npm run dev:electron\" \"npm run dev:renderer\" --kill-others",
+    "dev:electron": "tsc -p tsconfig.main.json && NODE_ENV=development electron .",
+    "dev:renderer": "vite",
+    "dev:brain": "export PYTHONPATH=$PYTHONPATH:./src && .venv/bin/python -m brain.server",
+    "build": "npm run build:renderer && npm run build:electron",
+    "build:electron": "tsc -p tsconfig.main.json",
+    "build:renderer": "vite build",
+    "build:mac": "npm run build && electron-builder --mac --arm64",
+    "build:dmg": "npm run build && electron-builder --mac dmg",
+    "build:ci": "npm run lint:ts && npm run build",
+    "start": "electron .",
+    "python:install": ".venv/bin/pip install -r requirements.txt",
+    "python:brain": "export PYTHONPATH=$PYTHONPATH:./src && .venv/bin/python -m brain.server",
+    "python:brain:custom": "unset MACOSX_DEPLOYMENT_TARGET SDKROOT SYSTEM_VERSION_COMPAT && export PYTHONPATH=$PYTHONPATH:./src && .venv/bin/python -m brain.server",
+    "build:mac:custom": "./scripts/build_mac_custom.sh",
+    "build:mac:fast": "./scripts/build_mac_custom.sh --fast",
+    "test:ci": "pytest -q --cov=src --cov-report=xml --cov-report=term --junit-xml=pytest-results.xml",
+    "lint:all": "npm run lint:py && npm run lint:ts",
+    "lint:py": "flake8 src tests scripts --exclude=dist_venv,node_modules,.venv",
+    "lint:ts": "eslint 'src/**/*.{ts,tsx}' --max-warnings=0",
+    "format:check": "prettier --check 'src/**/*.{ts,tsx,json}'",
+    "format:write": "prettier --write 'src/**/*.{ts,tsx,json}'"
+  },
+  "author": "AtlasTrinity Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "@typescript-eslint/eslint-plugin": "^6.16.0",
+    "@typescript-eslint/parser": "^6.16.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "concurrently": "^8.2.2",
+    "electron": "^28.1.0",
+    "electron-builder": "^24.9.1",
+    "eslint": "^8.56.0",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "prettier": "^3.1.1",
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.10"
+  },
+  "dependencies": {
+    "@buggyhunter/context7-mcp": "^1.0.6",
+    "@mcpcentral/mcp-time": "^0.0.3",
+    "@modelcontextprotocol/server-brave-search": "^0.6.2",
+    "@modelcontextprotocol/server-filesystem": "^2025.12.18",
+    "@modelcontextprotocol/server-github": "^2025.4.8",
+    "@modelcontextprotocol/server-memory": "^2025.11.25",
+    "@modelcontextprotocol/server-postgres": "^0.6.2",
+    "@modelcontextprotocol/server-puppeteer": "^2025.5.12",
+    "@modelcontextprotocol/server-sequential-thinking": "^2025.12.18",
+    "@modelcontextprotocol/server-slack": "^2025.4.25",
+    "@mseep/git-mcp-server": "^2.1.4",
+    "@thelord/mcp-server-docker-npx": "^0.4.0",
+    "apple-mcp": "^1.0.0",
+    "chrome-devtools-mcp": "^0.12.1",
+    "cloudinary": "^2.8.0",
+    "mcp-sequentialthinking-tools": "^0.0.4",
+    "mcp-server-fetch-typescript": "^0.1.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "stripe": "^20.1.1"
+  },
+  "build": {
+    "appId": "com.atlastrinity.app",
+    "productName": "AtlasTrinity",
+    "directories": {
+      "output": "release"
+    },
+    "mac": {
+      "icon": "build/icon.icns",
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "minimumSystemVersion": "26.3",
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "files": [
+      "dist/**/*",
+      "design-system/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "src/brain",
+        "to": "brain",
+        "filter": [
+          "**/*.py",
+          "!**/__pycache__"
+        ]
+      },
+      {
+        "from": "providers",
+        "to": "providers",
+        "filter": [
+          "**/*.py"
+        ]
+      },
+      {
+        "from": "src/mcp_server",
+        "to": "mcp_server",
+        "filter": [
+          "**/*.py",
+          "**/*.json",
+          "!**/__pycache__"
+        ]
+      },
+      {
+        "from": "dist_venv",
+        "to": ".venv",
+        "filter": [
+          "**/*",
+          "!**/__pycache__",
+          "!**/*.pyc"
+        ]
+      },
+      {
+        "from": "requirements.txt",
+        "to": "requirements.txt"
+      },
+      {
+        "from": ".env",
+        "to": ".env"
+      },
+      {
+        "from": "vendor/mcp-server-macos-use/.build/release/mcp-server-macos-use",
+        "to": "bin/mcp-server-macos-use"
+      },
+      {
+        "from": "config/config.yaml",
+        "to": "config.yaml"
+      }
+    ]
+  }
+}

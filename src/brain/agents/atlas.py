@@ -1,0 +1,571 @@
+"""
+Atlas - The Strategist
+
+Role: Strategic analysis, plan formulation, task delegation
+Voice: Dmytro (male)
+Model: GPT-4.1 / GPT-5 mini
+"""
+
+import os
+# Import provider
+# Robust path handling for both Dev and Production (Packaged)
+import sys
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+# Check root (Dev: src/brain/agents -> root)
+root_dev = os.path.join(current_dir, "..", "..", "..")
+# Check resources (Prod: brain/agents -> Resources)
+root_prod = os.path.join(current_dir, "..", "..")
+
+for r in [root_dev, root_prod]:
+    abs_r = os.path.abspath(r)
+    if abs_r not in sys.path:
+        sys.path.insert(0, abs_r)
+
+from providers.copilot import CopilotLLM  # noqa: E402
+
+from ..config_loader import config  # noqa: E402
+from ..context import shared_context  # noqa: E402
+from ..logger import logger  # noqa: E402
+from ..memory import long_term_memory  # noqa: E402
+from ..prompts import AgentPrompts  # noqa: E402
+
+
+@dataclass
+class TaskPlan:
+    """Execution plan structure"""
+
+    id: str
+    goal: str
+    steps: List[Dict[str, Any]]
+    created_at: datetime = field(default_factory=datetime.now)
+    status: str = "pending"  # pending, active, completed, failed
+    context: Dict[str, Any] = field(default_factory=dict)
+
+
+class Atlas:
+    """
+    Atlas - The Strategist
+
+    Functions:
+    - User context analysis
+    - ChromaDB search (historical experience)
+    - Global strategy formulation
+    - Execution plan creation
+    - Task delegation to Tetyana
+    """
+
+    NAME = AgentPrompts.ATLAS["NAME"]
+    DISPLAY_NAME = AgentPrompts.ATLAS["DISPLAY_NAME"]
+    VOICE = AgentPrompts.ATLAS["VOICE"]
+    COLOR = AgentPrompts.ATLAS["COLOR"]
+    SYSTEM_PROMPT = AgentPrompts.ATLAS["SYSTEM_PROMPT"]
+
+    def __init__(self, model_name: str = "raptor-mini"):
+        # Get model config (config.yaml > parameter > env variables)
+        agent_config = config.get_agent_config("atlas")
+        final_model = model_name
+        if model_name == "raptor-mini":  # default parameter
+            final_model = agent_config.get("model") or os.getenv(
+                "COPILOT_MODEL", "raptor-mini"
+            )
+
+        self.llm = CopilotLLM(model_name=final_model)
+        self.temperature = agent_config.get("temperature", 0.7)
+        self.current_plan: Optional[TaskPlan] = None
+        self.history: List[Dict[str, Any]] = []
+
+    async def use_sequential_thinking(
+        self, problem: str, available_tools: list = None
+    ) -> Dict[str, Any]:
+        """
+        Use sequential-thinking MCP for deep reasoning on complex problems.
+        Returns structured analysis with step-by-step recommendations.
+        """
+        from ..logger import logger
+        from ..mcp_manager import mcp_manager
+
+        if available_tools is None:
+            available_tools = [
+                "terminal",
+                "filesystem",
+                "browser",
+                "gui",
+                "applescript",
+            ]
+
+        try:
+            result = await mcp_manager.call_tool(
+                "sequential-thinking",
+                "sequentialthinking_tools",
+                {
+                    "available_mcp_tools": available_tools,
+                    "thought": f"Analyzing task: {problem}",
+                    "thought_number": 1,
+                    "total_thoughts": 5,
+                    "next_thought_needed": True,
+                    "current_step": {
+                        "step_description": "Initial analysis",
+                        "expected_outcome": "Clear understanding of the problem",
+                        "recommended_tools": [],
+                    },
+                },
+            )
+            logger.info(f"[ATLAS] Sequential thinking result: {str(result)[:300]}")
+            return {"success": True, "analysis": result}
+        except Exception as e:
+            logger.warning(f"[ATLAS] Sequential thinking unavailable: {e}")
+            return {"success": False, "error": str(e)}
+
+    async def analyze_request(
+        self,
+        user_request: str,
+        context: Dict[str, Any] = None,
+        history: List[Any] = None,
+    ) -> Dict[str, Any]:
+        """Analyzes user request: determines intent (chat vs task)"""
+        from langchain_core.messages import HumanMessage, SystemMessage
+
+        req_lower = user_request.lower().strip()
+
+        # Comprehensive layout-agnostic and conversational heuristic
+        # logger.info(f"Chat keywords: {chat_keywords}") # Removed to fix F841
+
+        # Optimized conversational detection - stricter rules to avoid false positives with tasks
+        import re
+
+        # Regex for word boundaries to avoid substring matches (e.g., "hi" in "history")
+        def has_word(text, word):
+            return re.search(r"\b" + re.escape(word) + r"\b", text) is not None
+
+        # Greetings
+        greeting_words = ["привіт", "здоров", "вітаю", "ghbdsn", "ghbdtn"]
+        is_greeting = (
+            any(w in req_lower for w in greeting_words)
+            or has_word(req_lower, "hi")
+            or has_word(req_lower, "hello")
+        )
+
+        # How are you (Strict phrases only)
+        # Avoid checking single particles like "ся" or "ти" which appear in normal text
+        how_are_you_phrases = [
+            "як справи",
+            "як ти",
+            "як ви",
+            "як воно",
+            "як ся маєш",
+            "що нового",
+            "rfr ltkf",
+        ]
+        is_how_are_you = any(phrase in req_lower for phrase in how_are_you_phrases)
+
+        # Confirmations (Simple positive responses)
+        confirm_words = ["так", "звісно", "ага", "ок", "добре", "зрозумів", "fuf", "lf"]
+        is_confirm = any(req_lower == w for w in confirm_words)
+
+        # Thanks
+        thanks_words = ["дякую", "спасибі", "дкю", "dfre.", "cgfcb,"]
+        is_thanks = any(w in req_lower for w in thanks_words) or has_word(
+            req_lower, "thanks"
+        )
+
+        # Check for simple greetings or casual match
+        if (
+            is_greeting
+            or is_how_are_you
+            or is_thanks
+            or is_confirm
+            or len(req_lower) < 2
+        ):
+            response_type = "greeting"
+            if is_how_are_you:
+                response_type = "how_are_you"
+
+            initial_response = "Привіт! Я на зв'язку."
+            if response_type == "how_are_you":
+                initial_response = "Привіт! У мене все чудово. Чим можу допомогти?"
+            elif req_lower in ["так", "звісно", "ага", "ок", "добре"]:
+                initial_response = "Чудово! Продовжуємо."
+
+            return {
+                "intent": "chat",
+                "reason": "Розпізнано розмовний характер, привітання або просте підтвердження.",
+                "enriched_request": user_request,
+                "complexity": "low",
+                "initial_response": initial_response,
+            }
+
+        prompt = f"""Analyze the user request and decide if it's a simple conversation or a technical task.
+
+User Request: {user_request}
+Context: {context or 'None'}
+Conversation History: {history or 'None'}
+
+CRITICAL CLASSIFICATION RULES:
+1. 'chat' - Greetings, 'How are you', jokes, appreciation (thanks), or SIMPLE CONFIRMATIONS (like 'Yes', 'Ok', 'Do it') that refer to the IMMEDIATE previous assistant question.
+2. 'task' - Direct instructions to DO something new (open app, run command, search file).
+
+FOCUS: If the user says 'Yes' or 'Do it', look ONLY at the very last message from you (Assistant). If you just asked to show time, 'Yes' means show time. IGNORE tasks from older history.
+
+ALL textual responses (reason, initial_response) MUST be in UKRAINIAN.
+
+Respond STRICTLY in JSON:
+{{
+    "intent": "chat" or "task",
+    "reason": "Explain your choice in Ukrainian",
+    "enriched_request": "Detailed description of the request (English)",
+    "complexity": "low/medium/high",
+    "initial_response": "Short reply to user ONLY if intent is 'chat' (Ukrainian), else null"
+}}
+"""
+        messages = [
+            SystemMessage(content=self.SYSTEM_PROMPT),
+            HumanMessage(content=prompt),
+        ]
+
+        try:
+            response = await self.llm.ainvoke(messages)
+            return self._parse_response(response.content)
+        except Exception as e:
+            # If LLM fails (e.g. 400 error), default to chat for safety unless it looks very much like a command
+            logger.error(f"Intent detection LLM failed: {e}")
+            is_likely_task = any(
+                cmd in req_lower
+                for cmd in ["відкрий", "запусти", "terminal", "python", "file", "код"]
+            )
+            return {
+                "intent": "task" if is_likely_task else "chat",
+                "reason": f"Помилка API ({e}). Автоматичне визначення.",
+                "enriched_request": user_request,
+                "complexity": "low",
+                "initial_response": (
+                    "Я трохи підвисаю, але готовий спілкуватися."
+                    if not is_likely_task
+                    else None
+                ),
+            }
+
+    async def chat(self, user_request: str, history: List[Any] = None) -> str:
+        """Friendly chat mode with context memory"""
+        from langchain_core.messages import HumanMessage, SystemMessage
+
+        chat_prompt = """You are in friendly conversation mode.
+Your role: Witty, smart interlocutor Atlas.
+Style: Concise, with humor.
+LANGUAGE: You MUST respond in UKRAINIAN only!
+Do not suggest creating a plan, just talk."""
+
+        # Build message history
+        messages = [SystemMessage(content=chat_prompt)]
+
+        # Add historical context (last 5-10 messages for speed)
+        if history:
+            messages.extend(history[-10:])
+
+        messages.append(HumanMessage(content=user_request))
+
+        response = await self.llm.ainvoke(messages)
+        if hasattr(response, "content"):
+            return response.content
+        return str(response)
+
+    async def create_plan(self, enriched_request: Dict[str, Any]) -> TaskPlan:
+        """
+        Principal Architect: Creates an execution plan with Strategic Thinking.
+        """
+        import uuid
+
+        from langchain_core.messages import HumanMessage, SystemMessage
+
+        task_text = enriched_request.get("enriched_request", str(enriched_request))
+
+        # 1. STRATEGIC ANALYSIS (Internal Thought)
+        # complexity = enriched_request.get("complexity", "medium") # Removed to fix F841
+        logger.info(
+            f"[ATLAS] Deep Thinking: Analyzing strategy for '{task_text[:50]}...'"
+        )
+
+        # Memory recall for strategy
+        memory_context = ""
+        if long_term_memory.available:
+            similar = long_term_memory.recall_similar_tasks(task_text, n_results=2)
+            if similar:
+                memory_context = (
+                    "\nPAST LESSONS (Strategies used before):\n"
+                    + "\n".join([f"- {s['document']}" for s in similar])
+                )
+
+        simulation_prompt = f"""Think deeply as a Strategic Architect about: {task_text}
+        {memory_context}
+
+        Analyze:
+        1. Underlying logic of the task.
+        2. Sequence of apps/tools needed.
+        3. Potential technical barriers on macOS.
+
+        Respond in English with a technical strategy.
+        """
+
+        try:
+            sim_resp = await self.llm.ainvoke(
+                [
+                    SystemMessage(
+                        content="You are a Strategic Architect. Think technically and deeply in English."
+                    ),
+                    HumanMessage(content=simulation_prompt),
+                ]
+            )
+            simulation_result = (
+                sim_resp.content if hasattr(sim_resp, "content") else str(sim_resp)
+            )
+        except Exception as e:
+            logger.warning(f"[ATLAS] Deep Thinking failed: {e}")
+            simulation_result = "Standard execution strategy."
+
+        # 2. PLAN FORMULATION
+        prompt = f"""Create a Master Execution Plan.
+
+        REQUEST: {task_text}
+        STRATEGY: {simulation_result}
+        {shared_context.available_mcp_catalog if hasattr(shared_context, 'available_mcp_catalog') else ''}
+
+        CONSTRAINTS:
+        - Output JSON matching the format in your SYSTEM PROMPT.
+        - 'goal', 'reason', and 'action' descriptions MUST be in English (technical precision).
+        - 'voice_summary' MUST be in UKRAINIAN (for the user).
+        - **NO META-STEPS**: Skip steps like "Think about X", "Classify Y", or "Verify Z". Only plan DIRECT tasks.
+
+        Steps should be atomic and logical.
+        """
+
+        messages = [
+            SystemMessage(content=self.SYSTEM_PROMPT),
+            HumanMessage(content=prompt),
+        ]
+
+        response = await self.llm.ainvoke(messages)
+        plan_data = self._parse_response(response.content)
+
+        self.current_plan = TaskPlan(
+            id=str(uuid.uuid4())[:8],
+            goal=plan_data.get("goal", enriched_request.get("enriched_request", "")),
+            steps=plan_data.get("steps", []),
+            context={**enriched_request, "simulation": simulation_result},
+        )
+
+        return self.current_plan
+
+    async def get_grisha_report(self, step_id: int) -> Optional[str]:
+        """Retrieve Grisha's detailed rejection report from notes or memory"""
+        from ..mcp_manager import mcp_manager
+
+        # Try notes first (faster and cleaner)
+        try:
+            result = await mcp_manager.call_tool(
+                "notes",
+                "search_notes",
+                {
+                    "category": "verification_report",
+                    "tags": [f"step_{step_id}"],
+                    "limit": 1,
+                },
+            )
+
+            if result and hasattr(result, "content"):
+                for item in result.content:
+                    if hasattr(item, "text"):
+                        data = (
+                            eval(item.text) if isinstance(item.text, str) else item.text
+                        )
+                        if data.get("notes") and len(data["notes"]) > 0:
+                            note_id = data["notes"][0]["id"]
+                            # Read full note
+                            note_result = await mcp_manager.call_tool(
+                                "notes", "read_note", {"note_id": note_id}
+                            )
+                            if note_result and hasattr(note_result, "content"):
+                                for note_item in note_result.content:
+                                    if hasattr(note_item, "text"):
+                                        note_data = (
+                                            eval(note_item.text)
+                                            if isinstance(note_item.text, str)
+                                            else note_item.text
+                                        )
+                                        logger.info(
+                                            f"[ATLAS] Retrieved Grisha's report from notes for step {step_id}"
+                                        )
+                                        return note_data.get("content", "")
+            elif (
+                isinstance(result, dict)
+                and result.get("success")
+                and result.get("notes")
+            ):
+                notes = result["notes"]
+                if notes and len(notes) > 0:
+                    note_id = notes[0]["id"]
+                    note_result = await mcp_manager.call_tool(
+                        "notes", "read_note", {"note_id": note_id}
+                    )
+                    if isinstance(note_result, dict) and note_result.get("success"):
+                        logger.info(
+                            f"[ATLAS] Retrieved Grisha's report from notes for step {step_id}"
+                        )
+                        return note_result.get("content", "")
+        except Exception as e:
+            logger.warning(f"[ATLAS] Could not retrieve from notes: {e}")
+
+        # Fallback to memory
+        try:
+            result = await mcp_manager.call_tool(
+                "memory", "search_nodes", {"query": f"grisha_rejection_step_{step_id}"}
+            )
+
+            if result and hasattr(result, "content"):
+                for item in result.content:
+                    if hasattr(item, "text"):
+                        return item.text
+            elif isinstance(result, dict) and "entities" in result:
+                entities = result["entities"]
+                if entities and len(entities) > 0:
+                    return entities[0].get("observations", [""])[0]
+
+            logger.info(
+                f"[ATLAS] Retrieved Grisha's report from memory for step {step_id}"
+            )
+        except Exception as e:
+            logger.warning(f"[ATLAS] Could not retrieve from memory: {e}")
+
+        return None
+
+    async def help_tetyana(self, step_id: int, error: str) -> Dict[str, Any]:
+        """Helps Tetyana when she is stuck, using shared context and Grisha's feedback for better solutions"""
+        from langchain_core.messages import HumanMessage, SystemMessage
+
+        # Get context for better recovery suggestions
+        context_info = shared_context.to_dict()
+
+        # Try to get Grisha's detailed report
+        grisha_report = await self.get_grisha_report(step_id)
+        grisha_feedback = ""
+        if grisha_report:
+            grisha_feedback = f"\n\nGRISHA'S DETAILED FEEDBACK:\n{grisha_report}\n"
+
+        prompt = f"""Tetyana is stuck at step {step_id}.
+
+ Error: {error}
+ {grisha_feedback}
+
+ SHARED CONTEXT: {context_info}
+
+ Current plan: {self.current_plan.steps if self.current_plan else 'None'}
+
+ You are the Meta-Planner. Provide an ALTERNATIVE strategy or a structural correction.
+ IMPORTANT: If Grisha provided detailed feedback above, use it to understand EXACTLY what went wrong and avoid repeating the same mistake.
+
+ Output JSON matching the 'help_tetyana' schema:
+ {{
+     "reason": "English analysis of the failure (incorporate Grisha's feedback if available)",
+     "alternative_steps": [
+         {{"id": 1, "action": "English description", "expected_result": "English description"}}
+     ],
+     "voice_message": "Short Ukrainian message explaining the pivot to the user"
+ }}
+ """
+
+        messages = [
+            SystemMessage(content=self.SYSTEM_PROMPT),
+            HumanMessage(content=prompt),
+        ]
+
+        logger.info(f"[ATLAS] Helping Tetyana with context: {context_info}")
+        response = await self.llm.ainvoke(messages)
+        return self._parse_response(response.content)
+
+    async def evaluate_execution(
+        self, goal: str, results: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Atlas reviews the execution results of Tetyana and Grisha.
+        Determines if the goal was REALLY achieved and if the strategy is worth remembering.
+        """
+        from langchain_core.messages import HumanMessage, SystemMessage
+
+        # Prepare execution summary for LLM
+        history = ""
+        for i, res in enumerate(results):
+            status = "✅" if res.get("success") else "❌"
+            history += f"{i + 1}. [{res.get('step_id')}] {res.get('action')}: {status} {str(res.get('result'))[:200]}\n"
+            if res.get("error"):
+                history += f"   Error: {res.get('error')}\n"
+
+        prompt = f"""Review the execution of the following task.
+
+        GOAL: {goal}
+
+        EXECUTION HISTORY:
+        {history}
+
+        CRITICAL EVALUATION:
+        1. Did we achieve the actual goal?
+        2. Was the path efficient?
+        3. Is this a 'Golden Path' that should be a lesson for the future?
+
+        Respond STRICTLY in JSON:
+        {{
+            "quality_score": 0.0 to 1.0 (float),
+            "achieved": true/false,
+            "analysis": "Critique in UKRAINIAN",
+            "compressed_strategy": [
+                "Step 1 intent",
+                "Step 2 intent",
+                ...
+            ],
+            "should_remember": true/false
+        }}
+        """
+
+        messages = [
+            SystemMessage(content=self.SYSTEM_PROMPT),
+            HumanMessage(content=prompt),
+        ]
+
+        logger.info(f"[ATLAS] Evaluating execution quality for goal: {goal[:50]}...")
+        try:
+            response = await self.llm.ainvoke(messages)
+            evaluation = self._parse_response(response.content)
+            logger.info(
+                f"[ATLAS] Evaluation complete. Score: {evaluation.get('quality_score', 0)}"
+            )
+            return evaluation
+        except Exception as e:
+            logger.error(f"[ATLAS] Evaluation failed: {e}")
+            return {"quality_score": 0, "achieved": False, "should_remember": False}
+
+    def get_voice_message(self, action: str, **kwargs) -> str:
+        """
+        Generates short message for TTS
+        """
+        messages = {
+            "plan_created": f"Я створив план на {kwargs.get('steps', 0)} пунктів. Передаю тобі, Тетяно.",
+            "enriched": "Я збагатив контекст запиту та сформував розширену версію.",
+            "helping": "Зрозумів проблему. Ось альтернативне рішення.",
+            "delegating": "Передаю виконання тобі, Тетяно.",
+        }
+        return messages.get(action, "")
+
+    def _parse_response(self, content: str) -> Dict[str, Any]:
+        """Parse JSON response from LLM"""
+        import json
+
+        try:
+            # Find JSON in response
+            start = content.find("{")
+            end = content.rfind("}") + 1
+            if start >= 0 and end > start:
+                return json.loads(content[start:end])
+        except json.JSONDecodeError:
+            pass
+        return {"raw": content}
