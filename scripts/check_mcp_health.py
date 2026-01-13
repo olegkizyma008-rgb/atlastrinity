@@ -1,38 +1,49 @@
+
 import asyncio
 import os
 import sys
 
 # Ensure project root is in path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.brain.config_loader import config
 from src.brain.mcp_manager import mcp_manager
 
-
-async def check_mcp():
-    print("--- MCP Diagnostic ---")
+async def check_all_servers():
+    print("--- Probing All Configured MCP Servers ---")
+    
+    # Reload config to be sure
+    mcp_manager.config = mcp_manager._load_config()
     servers = mcp_manager.config.get("mcpServers", {})
-
-    for server_name in servers:
-        if server_name.startswith("_") or servers[server_name].get("disabled"):
-            print( "[SKIP] {server_name}")
+    
+    tasks = []
+    server_names = []
+    
+    for name, cfg in servers.items():
+        if name.startswith("_"): continue
+        if cfg.get("disabled", False):
+            print(f"⚪️ {name}: DISABLED")
             continue
+            
+        server_names.append(name)
+        tasks.append(mcp_manager.get_session(name))
+        
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    for name, session in zip(server_names, results):
+        if isinstance(session, Exception):
+            print(f"❌ {name}: ERROR - {type(session).__name__}: {session}")
+        elif session:
+            print(f"✅ {name}: CONNECTED")
+            # Try a quick list_tools
+            try:
+                tools = await mcp_manager.list_tools(name)
+                print(f"   Tools: {len(tools)} available")
+            except Exception as e:
+                print(f"   ⚠️ {name}: Tools check failed - {e}")
+        else:
+            print(f"❌ {name}: FAILED TO CONNECT")
 
-        print(f"Connecting to {server_name}...")
-        try:
-            session = await mcp_manager.get_session(server_name)
-            if session:
-                result = await session.list_tools()
-                tools = result.tools
-                if tools:
-                    print( "[OK] {server_name}: Found {len(tools)} tools")
-                else:
-                    print( "[FAIL] {server_name}: No tools found")
-            else:
-                print( "[FAIL] {server_name}: Could not establish session")
-        except Exception as e:
-            print( "[ERROR] {server_name}: {e}")
-
+    await mcp_manager.cleanup()
 
 if __name__ == "__main__":
-    asyncio.run(check_mcp())
+    asyncio.run(check_all_servers())

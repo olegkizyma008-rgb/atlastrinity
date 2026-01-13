@@ -106,9 +106,8 @@
             ]
         },
         "fetch": {
-            "command": "npx",
+            "command": "bunx",
             "args": [
-                "-y",
                 "mcp-server-fetch-typescript"
             ],
             "description": "Fetch content from URLs (HTML to Markdown)",

@@ -431,12 +431,21 @@ Please type your response below and press Enter:
                 logger.error(f"[TETYANA] Reflexion failed: {re}")
                 break
 
+        voice_msg = tool_result.get("voice_message") or (monologue.get("voice_message") if attempt == 1 else None)
+        
+        # Fallback if no specific voice message from LLM/Tool
+        if not voice_msg and attempt == 1:
+            voice_msg = self.get_voice_message(
+                "completed" if tool_result.get("success") else "failed",
+                step=step.get("id", self.current_step),
+                description=step.get("action", "")
+            )
+
         res = StepResult(
             step_id=step.get("id", self.current_step),
             success=tool_result.get("success", False),
             result=tool_result.get("output", ""),
-            voice_message=tool_result.get("voice_message")
-            or (monologue.get("voice_message") if attempt == 1 else None),
+            voice_message=voice_msg,
             error=tool_result.get("error"),
             tool_call=tool_call,
         )
