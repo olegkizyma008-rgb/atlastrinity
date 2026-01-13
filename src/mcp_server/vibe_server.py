@@ -116,6 +116,9 @@ def _run_vibe(
 
 @server.tool()
 def vibe_which() -> Dict[str, Any]:
+    """
+    Locate the Vibe CLI binary path.
+    """
     vibe_path = _resolve_vibe_binary()
     if not vibe_path:
         return {"error": f"Vibe CLI not found on PATH (binary='{VIBE_BINARY}')"}
@@ -130,6 +133,16 @@ def vibe_execute(
     timeout_s: Optional[float] = None,
     env: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
+    """
+    Execute a raw Vibe CLI subcommand.
+
+    Args:
+        subcommand: The vibe subcommand to run (e.g., 'run', 'enable')
+        args: Optional list of arguments for the subcommand
+        cwd: Optional working directory for execution
+        timeout_s: Optional timeout in seconds
+        env: Optional dictionary of environment variables
+    """
     vibe_path = _resolve_vibe_binary()
     if not vibe_path:
         return {"error": f"Vibe CLI not found on PATH (binary='{VIBE_BINARY}')"}
@@ -160,6 +173,14 @@ def vibe_execute(
 def vibe_agent_chat(
     message: str, cwd: Optional[str] = None, timeout_s: Optional[float] = None
 ) -> Dict[str, Any]:
+    """
+    Send a message to the Vibe agent and get a response.
+
+    Args:
+        message: The message/prompt for the agent
+        cwd: Optional working directory
+        timeout_s: Optional timeout in seconds
+    """
     return vibe_execute(
         subcommand="agent-chat",
         args=["-p", message],
@@ -175,6 +196,15 @@ def vibe_smart_plan(
     cwd: Optional[str] = None,
     timeout_s: Optional[float] = None,
 ) -> Dict[str, Any]:
+    """
+    Generate a smart plan using Vibe based on a query.
+
+    Args:
+        query: The objective or query to plan for
+        editor: Optional editor to open the plan in (e.g. 'code', 'vim')
+        cwd: Optional working directory
+        timeout_s: Optional timeout in seconds
+    """
     args: List[str] = ["--query", query]
     if editor:
         args.extend(["--editor", editor])
@@ -187,6 +217,13 @@ def vibe_smart_plan(
 def vibe_self_healing_status(
     cwd: Optional[str] = None, timeout_s: Optional[float] = None
 ) -> Dict[str, Any]:
+    """
+    Check the status of Vibe's self-healing capabilities.
+
+    Args:
+        cwd: Optional working directory
+        timeout_s: Optional timeout in seconds
+    """
     return vibe_execute(
         subcommand="self-healing-status", args=[], cwd=cwd, timeout_s=timeout_s
     )
@@ -196,6 +233,13 @@ def vibe_self_healing_status(
 def vibe_self_healing_scan(
     cwd: Optional[str] = None, timeout_s: Optional[float] = None
 ) -> Dict[str, Any]:
+    """
+    Trigger a self-healing scan to detect and fix issues.
+
+    Args:
+        cwd: Optional working directory
+        timeout_s: Optional timeout in seconds
+    """
     return vibe_execute(
         subcommand="self-healing-scan", args=[], cwd=cwd, timeout_s=timeout_s
     )

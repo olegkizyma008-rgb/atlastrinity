@@ -39,6 +39,13 @@ def _normalize_entity(ent: Dict[str, Any]) -> Dict[str, Any]:
 
 @server.tool()
 def create_entities(entities: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Create or update multiple entities in the knowledge graph.
+
+    Args:
+        entities: List of entity dictionaries. Each must have a 'name' field.
+                 Optional fields: 'entityType' (default: 'concept'), 'observations' (list of strings).
+    """
     if not isinstance(entities, list) or not entities:
         return {"error": "entities must be a non-empty list"}
 
@@ -77,6 +84,13 @@ def create_entities(entities: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 @server.tool()
 def add_observations(name: str, observations: List[str]) -> Dict[str, Any]:
+    """
+    Add new observations to an existing entity.
+
+    Args:
+        name: The name of the entity to update
+        observations: List of new observation strings to add
+    """
     name = str(name or "").strip()
     if not name:
         return {"error": "name is required"}
@@ -101,6 +115,12 @@ def add_observations(name: str, observations: List[str]) -> Dict[str, Any]:
 
 @server.tool()
 def get_entity(name: str) -> Dict[str, Any]:
+    """
+    Retrieve full details of a specific entity.
+
+    Args:
+        name: The name of the entity to retrieve
+    """
     name = str(name or "").strip()
     if not name:
         return {"error": "name is required"}
@@ -115,6 +135,9 @@ def get_entity(name: str) -> Dict[str, Any]:
 
 @server.tool()
 def list_entities() -> Dict[str, Any]:
+    """
+    List all entity names in the knowledge graph.
+    """
     store = _load_store()
     db = store.get("entities", {}) or {}
     names = sorted(db.keys())
@@ -123,6 +146,13 @@ def list_entities() -> Dict[str, Any]:
 
 @server.tool()
 def search(query: str, limit: int = 10) -> Dict[str, Any]:
+    """
+    Search for entities matching a query string.
+
+    Args:
+        query: Text to search for within entity names, types, and observations
+        limit: Maximum number of results to return (default: 10)
+    """
     q = str(query or "").strip().lower()
     if not q:
         return {"error": "query is required"}
@@ -162,6 +192,12 @@ def search_nodes(query: str, limit: int = 10) -> Dict[str, Any]:
 
 @server.tool()
 def delete_entity(name: str) -> Dict[str, Any]:
+    """
+    Delete an entity from the knowledge graph.
+
+    Args:
+        name: The name of the entity to delete
+    """
     name = str(name or "").strip()
     if not name:
         return {"error": "name is required"}

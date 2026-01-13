@@ -44,6 +44,14 @@ def _search_ddg(query: str, max_results: int, timeout_s: float) -> List[Dict[str
 def duckduckgo_search(
     query: str, max_results: int = 5, timeout_s: float = 10.0
 ) -> Dict[str, Any]:
+    """
+    Perform a web search using DuckDuckGo.
+
+    Args:
+        query: The search query string
+        max_results: Maximum number of results to return (default: 5, max: 20)
+        timeout_s: Request timeout in seconds (default: 10.0)
+    """
     if not query or not query.strip():
         return {"error": "query is required"}
 

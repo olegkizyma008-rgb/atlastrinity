@@ -41,6 +41,12 @@ def _repo_root(cwd: Optional[str] = None) -> Optional[str]:
 
 @server.tool()
 def git_repo_root(path: str = ".") -> Dict[str, Any]:
+    """
+    Find the root directory of the git repository.
+
+    Args:
+        path: Path to start searching from (default: current directory)
+    """
     root = _repo_root(cwd=path)
     if not root:
         return {"error": "not a git repository"}
@@ -51,6 +57,14 @@ def git_repo_root(path: str = ".") -> Dict[str, Any]:
 def git_status(
     path: str = ".", porcelain: bool = True, timeout_s: float = 20.0
 ) -> Dict[str, Any]:
+    """
+    Get the status of the git repository.
+
+    Args:
+        path: Path within the repository (default: current directory)
+        porcelain: Whether to return machine-readable output (default: True)
+        timeout_s: Command timeout in seconds (default: 20.0)
+    """
     args = ["status"]
     if porcelain:
         args.append("--porcelain")
@@ -64,6 +78,14 @@ def git_status(
 def git_diff(
     path: str = ".", staged: bool = False, timeout_s: float = 20.0
 ) -> Dict[str, Any]:
+    """
+    Get the diff of the git repository.
+
+    Args:
+        path: Path within the repository (default: current directory)
+        staged: Whether to show staged changes (default: False)
+        timeout_s: Command timeout in seconds (default: 20.0)
+    """
     args = ["diff"]
     if staged:
         args.append("--staged")
@@ -77,6 +99,14 @@ def git_diff(
 def git_log(
     path: str = ".", limit: int = 20, timeout_s: float = 20.0
 ) -> Dict[str, Any]:
+    """
+    Get the commit log of the git repository.
+
+    Args:
+        path: Path within the repository (default: current directory)
+        limit: Maximum number of commits to return (default: 20)
+        timeout_s: Command timeout in seconds (default: 20.0)
+    """
     lim = max(1, min(int(limit), 200))
     args = ["log", f"-{lim}", "--pretty=format:%H %s"]
     root = _repo_root(cwd=path)
@@ -92,6 +122,15 @@ def git_show(
     file_path: Optional[str] = None,
     timeout_s: float = 20.0,
 ) -> Dict[str, Any]:
+    """
+    Show the contents of a specific revision or file at a revision.
+
+    Args:
+        path: Path within the repository (default: current directory)
+        rev: Revision to show (default: HEAD)
+        file_path: Optional specific file path to show content of
+        timeout_s: Command timeout in seconds (default: 20.0)
+    """
     args = ["show", rev]
     if file_path:
         args[-1] = f"{rev}:{file_path}"
@@ -103,6 +142,13 @@ def git_show(
 
 @server.tool()
 def git_branch_list(path: str = ".", timeout_s: float = 20.0) -> Dict[str, Any]:
+    """
+    List all branches in the repository.
+
+    Args:
+        path: Path within the repository (default: current directory)
+        timeout_s: Command timeout in seconds (default: 20.0)
+    """
     args = ["branch", "--format=%(refname:short)"]
     root = _repo_root(cwd=path)
     if not root:
@@ -112,6 +158,13 @@ def git_branch_list(path: str = ".", timeout_s: float = 20.0) -> Dict[str, Any]:
 
 @server.tool()
 def git_current_branch(path: str = ".", timeout_s: float = 20.0) -> Dict[str, Any]:
+    """
+    Get the current branch name.
+
+    Args:
+        path: Path within the repository (default: current directory)
+        timeout_s: Command timeout in seconds (default: 20.0)
+    """
     args = ["rev-parse", "--abbrev-ref", "HEAD"]
     root = _repo_root(cwd=path)
     if not root:
