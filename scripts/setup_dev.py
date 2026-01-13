@@ -558,7 +558,7 @@ def sync_configs():
                     config.setdefault("mcpServers", {})["notes"] = {
                         "command": "python3",
                         "connect_timeout": 30,
-                        "args": ["-m", "mcp_server.notes_server"],
+                        "args": ["-m", "src.mcp_server.notes_server"],
                         "description": "Text notes and reports storage for agent communication",
                         "disabled": False,
                         "tier": 2,
