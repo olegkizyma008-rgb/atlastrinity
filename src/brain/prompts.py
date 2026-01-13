@@ -12,7 +12,7 @@ DEFAULT_REALM_CATALOG = """
 AVAILABLE REALMS (MCP Servers):
 - terminal: Shell access and system commands.
 - filesystem: Direct file operations.
-- macos-use: UI control and automation.
+- macos-use: UI control (click, type, traverse). Use this to automate Safari/Chrome if no direct browser tool is available.
 - browser: Advanced web interaction.
 - search: Internet information discovery.
 ... and 10+ more specialized servers.
