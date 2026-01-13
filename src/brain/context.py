@@ -41,6 +41,7 @@ class SharedContext:
     operation_count: int = 0
     last_operation: str = ""
     last_update: Optional[datetime] = None
+    available_tools_summary: str = ""
 
     def update_path(self, path: str, operation: str = "access") -> None:
         """

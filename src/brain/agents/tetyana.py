@@ -251,13 +251,28 @@ Please type your response below and press Enter:
         logger.info(f"[TETYANA] Executing step {step.get('id')}...")
         context_data = shared_context.to_dict()
 
+        # Populate tools summary if empty
+        if not shared_context.available_tools_summary:
+            logger.info("[TETYANA] Fetching fresh MCP catalog for context...")
+            shared_context.available_tools_summary = await mcp_manager.get_mcp_catalog()
+
+        # Fetch Grisha's feedback for retry attempts
+        grisha_feedback = ""
+        if attempt > 1:
+            logger.info(
+                f"[TETYANA] Attempt {attempt} - fetching Grisha's rejection feedback..."
+            )
+            grisha_feedback = await self.get_grisha_feedback(step.get("id")) or ""
+
         target_server = step.get("realm") or step.get("tool") or step.get("server")
         tools_summary = ""
         monologue = {}
 
         # SMART GATE: Check if we can skip reasoning
+        # Only skip if it's the first attempt; on retries (attempt > 1), always use reasoning to address feedback
         skip_reasoning = (
-            target_server in SKIP_REASONING_TOOLS
+            attempt == 1
+            and target_server in SKIP_REASONING_TOOLS
             and step.get("tool")
             and step.get("args")
         )
@@ -298,7 +313,10 @@ Please type your response below and press Enter:
                 )
 
             reasoning_prompt = AgentPrompts.tetyana_reasoning_prompt(
-                str(step), context_data, tools_summary=tools_summary
+                str(step),
+                context_data,
+                tools_summary=tools_summary,
+                feedback=grisha_feedback,
             )
 
             try:
@@ -486,6 +504,9 @@ Please type your response below and press Enter:
             "brew",
         ]
         fs_synonyms = ["filesystem", "fs", "file", "файлова система", "files"]
+        scraper_synonyms = ["scrape_and_extract", "scrape", "extract", "scraper", "web_scraper", "justwatch_api", "reelgood_api"]
+        search_synonyms = ["duckduckgo_search", "duckduckgo", "search", "google", "bing", "ddg"]
+        discovery_synonyms = ["list_tools", "help", "show_tools", "inspect"]
 
         # Intent-based routing
         if any(
@@ -543,6 +564,31 @@ Please type your response below and press Enter:
             tool_name = "filesystem"
             logger.info("[TETYANA] FS-map: routing to filesystem")
 
+        elif any(
+            tool_name == syn or tool_name.split(".")[0] == syn for syn in scraper_synonyms
+        ):
+            # Map 'scrape_and_extract' or 'justwatch_api' to 'fetch' if URL provided, else search
+            if "url" in args or "urls" in args:
+                tool_name = "fetch"
+                logger.info(f"[TETYANA] Scraper-map: {tool_name} -> fetch")
+            else:
+                tool_name = "duckduckgo-search"
+                logger.info(f"[TETYANA] Scraper-map: {tool_name} -> duckduckgo-search")
+
+        elif any(
+            tool_name == syn or tool_name.split(".")[0] == syn for syn in search_synonyms
+        ):
+            tool_name = "duckduckgo-search"
+            logger.info(f"[TETYANA] Search-map: {tool_name} -> duckduckgo-search")
+
+        elif any(
+            tool_name == syn for syn in discovery_synonyms
+        ):
+            # Meta-tool call: list_tools
+            logger.info("[TETYANA] Meta-map: list_tools -> dynamic catalog")
+            catalog = await mcp_manager.get_mcp_catalog()
+            return {"success": True, "output": f"Available Realms and basic tools:\n{catalog}"}
+
         # Detect mkdir/cat direct hallucinations
         if tool_name in ["mkdir", "ls", "cat", "rm", "mv", "cp", "touch"]:
             action = tool_name
@@ -575,6 +621,14 @@ Please type your response below and press Enter:
             if args["path"] != original:
                 logger.info(f"[TETYANA] Path resolved: {original} -> {args['path']}")
 
+        # Patches for hallucinated plural arguments
+        if tool_name == "fetch" or (explicit_server == "fetch"):
+             if "urls" in args and "url" not in args:
+                 urls = args["urls"]
+                 if isinstance(urls, list) and len(urls) > 0:
+                     args["url"] = urls[0] # Take first for now
+                     logger.info(f"[TETYANA] Argument patch: urls -> url (using {args['url']})")
+
         # Direct MCP call
         if tool_name == "mcp":
             server = tool_call.get("server") or args.get("server")
@@ -590,8 +644,8 @@ Please type your response below and press Enter:
             # Handle realm-as-tool name in explicit dispatch
             if tool_name == explicit_server:
                 default_map = {
-                    "fetch": "fetch_url",
-                    "duckduckgo-search": "search",
+                    "fetch": "fetch",
+                    "duckduckgo-search": "duckduckgo_search",
                     "terminal": "execute_command",
                     "macos-use": "screenshot",
                     "time": "get_current_time",

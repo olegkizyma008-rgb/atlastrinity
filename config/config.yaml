@@ -77,6 +77,8 @@ mcp:
     enabled: true
   duckduckgo_search:
     enabled: true
+  fetch:
+    enabled: true
   brave_search:
     enabled: true
   # === TIER 4: OPTIONAL (Вимкнені) ===

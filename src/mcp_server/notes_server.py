@@ -1,8 +1,6 @@
 """
-Notes MCP Server - Simple text-based note taking and reporting system.from mcp.server import FastMCP
-
-# Initialize server (compat with previous FastMCP usage)
-server = FastMCP("notes")Complements the memory server for structured text storage and retrieval.
+Notes MCP Server - Simple text-based note taking and reporting system.
+Complements the memory server for structured text storage and retrieval.
 """
 
 import json

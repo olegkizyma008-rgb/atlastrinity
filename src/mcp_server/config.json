@@ -105,6 +105,45 @@
                 "grisha"
             ]
         },
+        "fetch": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "mcp-server-fetch-typescript"
+            ],
+            "description": "Fetch content from URLs (HTML to Markdown)",
+            "disabled": false,
+            "tier": 2,
+            "agents": [
+                "tetyana"
+            ]
+        },
+        "puppeteer": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-puppeteer"
+            ],
+            "description": "Browser automation (navigate, click, type, screenshot)",
+            "disabled": false,
+            "tier": 2,
+            "agents": [
+                "tetyana"
+            ]
+        },
+        "playwright": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-playwright"
+            ],
+            "description": "Advanced browser automation and testing",
+            "disabled": false,
+            "tier": 2,
+            "agents": [
+                "tetyana"
+            ]
+        },
         "memory": {
             "command": "python3",
             "connect_timeout": 60,
@@ -118,6 +157,21 @@
             "agents": [
                 "atlas",
                 "tetyana"
+            ]
+        },
+        "notes": {
+            "command": "python3",
+            "connect_timeout": 60,
+            "args": [
+                "-m",
+                "src.mcp_server.notes_server"
+            ],
+            "description": "Structured note-taking for agent feedback and reporting",
+            "disabled": false,
+            "tier": 2,
+            "agents": [
+                "tetyana",
+                "grisha"
             ]
         },
         "_comment_tier3": "=== TIER 3: MEDIUM (За потреби) ===",

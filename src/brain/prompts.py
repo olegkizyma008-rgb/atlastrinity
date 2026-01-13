@@ -10,12 +10,17 @@ from .config import WORKSPACE_DIR
 # Static defaults, but agents will now fetch dynamic summaries
 DEFAULT_REALM_CATALOG = """
 AVAILABLE REALMS (MCP Servers):
-- terminal: Shell access and system commands.
-- filesystem: Direct file operations.
-- macos-use: UI control (click, type, traverse). Use this to automate Safari/Chrome if no direct browser tool is available.
-- browser: Advanced web interaction.
-- search: Internet information discovery.
-... and 10+ more specialized servers.
+- terminal: Shell access. Tool: execute_command.
+- filesystem: File operations. Tools: read_file, write_file, list_directory.
+- macos-use: UI automation and screenshots.
+- puppeteer: Browser automation (navigate, click, type, screenshot).
+- fetch: URL content extraction. Tool: fetch_url.
+- duckduckgo-search: Web search. Tool: search.
+- vibe: Self-healing and advanced debugging.
+- notes: Storing/Reading feedback and reports. Tools: create_note, read_note.
+- memory: Knowledge graph access.
+
+CRITICAL: Do NOT invent high-level tools (e.g., 'scrape_and_extract'). Use only the real TOOLS found inside these Realms after Inspection.
 """
 
 
@@ -132,15 +137,19 @@ LANGUAGE:
 
     @staticmethod
     def tetyana_reasoning_prompt(
-        step: str, context: dict, tools_summary: str = ""
+        step: str, context: dict, tools_summary: str = "", feedback: str = ""
     ) -> str:
+        feedback_section = f"\n        PREVIOUS REJECTION FEEDBACK (from Grisha):\n        {feedback}\n" if feedback else ""
+        
         return f"""Analyze how to execute this atomic step: {step}.
 
         CONTEXT: {context}
+        {feedback_section}
         {tools_summary}
 
         Your task is to choose the BEST tool and arguments.
         CRITICAL: Follow the 'Schema' provided for each tool EXACTLY. Ensure parameter names and types match.
+        If there is feedback from Grisha above, ADAPT your strategy to address his concerns.
 
         Respond in JSON:
         {{
