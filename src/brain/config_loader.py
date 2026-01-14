@@ -54,9 +54,11 @@ class SystemConfig:
         MCP_DIR.mkdir(parents=True, exist_ok=True)
 
         # 1. Ensure global config.yaml exists
+        # 1. Ensure global config.yaml exists and is up-to-date with template
+        template_yaml = PROJECT_ROOT / "config" / "config.yaml"
+        
         if not global_path.exists():
-            # Seed from bundled template if available; otherwise generate defaults
-            template_yaml = PROJECT_ROOT / "config" / "config.yaml"
+            # First run: copy template directly
             if template_yaml.exists():
                 shutil.copy2(template_yaml, global_path)
             else:
@@ -67,6 +69,37 @@ class SystemConfig:
                         default_flow_style=False,
                         allow_unicode=True,
                     )
+        else:
+            # Sync: Merge template updates into global config while keeping user overrides
+            # Base = Template (contains new keys), Overlay = User Global (contains custom values)
+            try:
+                if template_yaml.exists():
+                    with open(template_yaml, "r", encoding="utf-8") as f:
+                        template_data = yaml.safe_load(f) or {}
+                    with open(global_path, "r", encoding="utf-8") as f:
+                        user_data = yaml.safe_load(f) or {}
+                    
+                    # Merge user data ON TOP of template defaults
+                    merged = deep_merge(template_data, user_data)
+                    
+                    # If there are changes (e.g. new keys from template), update global file
+                    if merged != user_data:
+                        # Create backup before modifying
+                        backup_path = global_path.with_suffix(".yaml.backup")
+                        shutil.copy2(global_path, backup_path)
+                        
+                        with open(global_path, "w", encoding="utf-8") as f:
+                            yaml.dump(
+                                merged,
+                                f,
+                                default_flow_style=False,
+                                allow_unicode=True
+                            )
+                        # logger is not initialized yet provided config_loader is imported early, 
+                        # but this ensures config is fresh.
+            except Exception as e:
+                # Fallback silently if sync fails to avoid boot loops
+                pass
 
         # 1b. Ensure global MCP config.json exists (and is synced from bundled template)
         try:
