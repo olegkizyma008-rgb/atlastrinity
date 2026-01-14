@@ -48,6 +48,7 @@ def run_mcp_command(binary_path, method, params, request_id=1):
 
 
 if __name__ == "__main__":
-    binary = "/Users/dev/Documents/GitHub/atlastrinity/vendor/mcp-server-macos-use/.build/release/mcp-server-macos-use"
+    project_root = "/Users/olegkizyma/Documents/GitHub/atlastrinity"
+    binary = f"{project_root}/vendor/mcp-server-macos-use/.build/arm64-apple-macosx/release/mcp-server-macos-use"
     # Try to open Calculator
     run_mcp_command(binary, "macos-use_open_application_and_traverse", {"identifier": "Calculator"})

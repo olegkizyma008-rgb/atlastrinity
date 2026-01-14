@@ -14,9 +14,9 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 
 def print_header(msg: str):
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  {msg}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
 
 def print_check(msg: str, status: bool, details: str = ""):

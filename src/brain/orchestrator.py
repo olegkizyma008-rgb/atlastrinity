@@ -473,7 +473,7 @@ class Trinity:
             # Keep-alive logger to show activity in UI during long LLM calls
             async def keep_alive_logging():
                 while True:
-                    await asyncio.sleep(4)
+                    await asyncio.sleep(15)  # Log every 15 seconds instead of 4
                     await self._log("Atlas is thinking... (Planning logic flow)", "system")
 
             planning_task = asyncio.create_task(self.atlas.create_plan(analysis))

@@ -59,7 +59,8 @@ def run_mcp_command(binary_path, commands):
 
 
 if __name__ == "__main__":
-    binary = "/Users/dev/Documents/GitHub/atlastrinity/vendor/mcp-server-macos-use/.build/release/mcp-server-macos-use"
+    project_root = "/Users/olegkizyma/Documents/GitHub/atlastrinity"
+    binary = f"{project_root}/vendor/mcp-server-macos-use/.build/arm64-apple-macosx/release/mcp-server-macos-use"
 
     # Try to open Calculator as a test
     commands = [
@@ -85,12 +86,13 @@ if __name__ == "__main__":
                     text_content = data["result"]["content"][0]["text"]
                     result_data = json.loads(text_content)
                     print(f"Success! App opened. PID: {result_data.get('pid')}")
-                    print(f"Elements found: {len(result_data.get('traversalAfter', []))}")
                     if result_data.get("traversalAfter"):
+                        elements = result_data["traversalAfter"].get("elements", [])
+                        print(f"Elements found: {len(elements)}")
                         print("Sample elements:")
-                        for el in result_data["traversalAfter"][:5]:
+                        for el in elements[:5]:
                             print(
-                                f"  - {el.get('role')}: {el.get('title') or el.get('value') or 'N/A'}"
+                                f"  - {el.get('role')}: {el.get('text') or el.get('value') or 'N/A'}"
                             )
         except Exception as e:
             print(f"Raw output {i}: {out[:200]}...")

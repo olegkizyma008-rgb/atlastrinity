@@ -24,7 +24,7 @@ class AgentPrompts:
             else ""
         )
 
-        return """Analyze how to execute this atomic step: {step}.
+        return f"""Analyze how to execute this atomic step: {step}.
 
         CONTEXT: {context}
         {feedback_section}
@@ -46,7 +46,7 @@ class AgentPrompts:
     def tetyana_reflexion_prompt(
         step: str, error: str, history: list, tools_summary: str = ""
     ) -> str:
-        return """Analysis of Failure: {error}.
+        return f"""Analysis of Failure: {error}.
 
         Step: {step}
         History of attempts: {history}
@@ -66,7 +66,7 @@ class AgentPrompts:
 
     @staticmethod
     def tetyana_execution_prompt(step: str, context_results: list) -> str:
-        return """Execute this task step: {step}.
+        return f"""Execute this task step: {step}.
     Current context results: {context_results}
     Respond ONLY with JSON:
     {{
@@ -80,7 +80,7 @@ class AgentPrompts:
     def grisha_strategy_prompt(
         step_action: str, expected_result: str, context: dict, overall_goal: str = ""
     ) -> str:
-        return """You are the Verification Strategist.
+        return f"""You are the Verification Strategist.
 
         OVERALL GOAL: {overall_goal}
         Step: {step_action}
@@ -104,7 +104,7 @@ class AgentPrompts:
         history: list,
         overall_goal: str = "",
     ) -> str:
-        return """Verify the result of the following step using MCP tools FIRST, screenshots only when necessary.
+        return f"""Verify the result of the following step using MCP tools FIRST, screenshots only when necessary.
 
     OVERALL GOAL: {overall_goal}
     STRATEGIC GUIDANCE (Follow this!):
@@ -137,7 +137,7 @@ class AgentPrompts:
 
     @staticmethod
     def atlas_intent_classification_prompt(user_request: str, context: str, history: str) -> str:
-        return """Analyze the user request and decide if it's a simple conversation, a technical task, or a SOFTWARE DEVELOPMENT task.
+        return f"""Analyze the user request and decide if it's a simple conversation, a technical task, or a SOFTWARE DEVELOPMENT task.
 
 User Request: {user_request}
 Context: {context}
@@ -174,7 +174,7 @@ Do not suggest creating a plan, just talk."""
 
     @staticmethod
     def atlas_simulation_prompt(task_text: str, memory_context: str) -> str:
-        return """Think deeply as a Strategic Architect about: {task_text}
+        return f"""Think deeply as a Strategic Architect about: {task_text}
         {memory_context}
 
         Analyze:
@@ -192,7 +192,7 @@ Do not suggest creating a plan, just talk."""
         catalog: str,
         vibe_directive: str = "",
     ) -> str:
-        return """Create a Master Execution Plan.
+        return f"""Create a Master Execution Plan.
 
         REQUEST: {task_text}
         STRATEGY: {strategy}
@@ -216,7 +216,7 @@ Do not suggest creating a plan, just talk."""
         context_info: dict,
         current_plan: list,
     ) -> str:
-        return """Tetyana is stuck at step {step_id}.
+        return f"""Tetyana is stuck at step {step_id}.
 
  Error: {error}
  {grisha_feedback}
@@ -240,7 +240,7 @@ Do not suggest creating a plan, just talk."""
 
     @staticmethod
     def atlas_evaluation_prompt(goal: str, history: str) -> str:
-        return """Review the execution of the following task.
+        return f"""Review the execution of the following task.
 
         GOAL: {goal}
 
@@ -270,7 +270,7 @@ Do not suggest creating a plan, just talk."""
 
     @staticmethod
     def grisha_security_prompt(action_str: str) -> str:
-        return """Analyze this action for security risks: {action_str}
+        return f"""Analyze this action for security risks: {action_str}
 
         Risks to check:
         1. Data loss (deletion, overwrite)
@@ -289,6 +289,6 @@ Do not suggest creating a plan, just talk."""
 
     @staticmethod
     def grisha_strategist_system_prompt(decision_context: str) -> str:
-        return """You are a Verification Strategist. Consider the environment and choose the best verification stack.
+        return f"""You are a Verification Strategist. Consider the environment and choose the best verification stack.
         ENVIRONMENT_DECISION: {decision_context}
         When visual evidence is conclusive, prioritize Vision verification. When authoritative system/data checks are needed, prefer MCP servers (favor local Swift-based MCP servers when available). Output internal strategies in English."""

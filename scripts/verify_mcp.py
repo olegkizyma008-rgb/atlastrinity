@@ -91,9 +91,9 @@ def test_server(name: str, config: Dict) -> Tuple[bool, str]:
 
 
 def main():
-    print(f"\n{BLUE}{'='*60}{RESET}")
+    print(f"\n{BLUE}{'=' * 60}{RESET}")
     print(f"{BLUE}  MCP Servers Health Check{RESET}")
-    print(f"{BLUE}{'='*60}{RESET}\n")
+    print(f"{BLUE}{'=' * 60}{RESET}\n")
 
     config = load_mcp_config()
     servers = config.get("mcpServers", {})
@@ -114,9 +114,9 @@ def main():
     total = len(results)
     passed = sum(1 for _, success, _ in results if success)
 
-    print(f"\n{BLUE}{'='*60}{RESET}")
+    print(f"\n{BLUE}{'=' * 60}{RESET}")
     print(f"{GREEN if passed == total else YELLOW}  {passed}/{total} servers OK{RESET}")
-    print(f"{BLUE}{'='*60}{RESET}\n")
+    print(f"{BLUE}{'=' * 60}{RESET}\n")
 
     sys.exit(0 if passed == total else 1)
 

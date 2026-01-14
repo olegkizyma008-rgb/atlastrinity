@@ -38,9 +38,9 @@ async def run_server_test(server_name: str, test_cases: list) -> dict:
         "error": None,
     }
 
-    print(f"\n{Colors.HEADER}{'='*60}{Colors.ENDC}")
+    print(f"\n{Colors.HEADER}{'=' * 60}{Colors.ENDC}")
     print(f"{Colors.HEADER}Testing MCP Server: {server_name}{Colors.ENDC}")
-    print(f"{Colors.HEADER}{'='*60}{Colors.ENDC}\n")
+    print(f"{Colors.HEADER}{'=' * 60}{Colors.ENDC}\n")
 
     try:
         # List available tools with timeout protection

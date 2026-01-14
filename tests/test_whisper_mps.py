@@ -47,9 +47,9 @@ def check_mps_availability():
 
 def test_whisper_device(device_name: str):
     """Тестує Whisper на вказаному device"""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"🧪 ТЕСТ WHISPER НА {device_name.upper()}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     try:
         start = time.time()
@@ -161,7 +161,7 @@ def main():
         print("     stt:")
         print("       device: 'cpu'")
 
-    print(f"\n{'='*60}\n")
+    print(f"\n{'=' * 60}\n")
 
 
 if __name__ == "__main__":

@@ -39,7 +39,7 @@ class AgentPrompts:
             else ""
         )
 
-        return """Analyze how to execute this atomic step: {step}.
+        return f"""Analyze how to execute this atomic step: {step}.
 
         CONTEXT: {context}
         {feedback_section}
@@ -58,10 +58,147 @@ class AgentPrompts:
         """
 
     @staticmethod
+    def atlas_intent_classification_prompt(user_request: str, context: str, history: str) -> str:
+        return f"""Analyze the user request and decide if it's a simple conversation, a technical task, or a SOFTWARE DEVELOPMENT task.
+
+User Request: {user_request}
+Context: {context}
+Conversation History: {history}
+
+CRITICAL CLASSIFICATION RULES:
+1. 'chat' - Greetings, 'How are you', jokes, appreciation (thanks), or SIMPLE CONFIRMATIONS.
+2. 'task' - Direct instructions to DO something (open app, run command, search file).
+3. 'development' - Requests to CREATE, BUILD, or WRITE software, code, scripts, apps, websites, APIs.
+   Examples: "Create a Python script", "Build a website", "Write an API", "Develop a bot"
+
+If request is 'development', set complexity to 'high' and use_vibe to true.
+
+ALL textual responses (reason, initial_response) MUST be in UKRAINIAN.
+
+Respond STRICTLY in JSON:
+{{
+    "intent": "chat" or "task" or "development",
+    "reason": "Explain your choice in Ukrainian",
+    "enriched_request": "Detailed description of the request (English)",
+    "complexity": "low/medium/high",
+    "use_vibe": true/false (true for development tasks),
+    "initial_response": "Short reply to user ONLY if intent is 'chat' (Ukrainian), else null"
+}}
+"""
+
+    @staticmethod
+    def atlas_chat_prompt() -> str:
+        return """You are in friendly conversation mode.
+Your role: Witty, smart interlocutor Atlas.
+Style: Concise, with humor.
+LANGUAGE: You MUST respond in UKRAINIAN only!
+Do not suggest creating a plan, just talk."""
+
+    @staticmethod
+    def atlas_simulation_prompt(task_text: str, memory_context: str) -> str:
+        return f"""Think deeply as a Strategic Architect about: {task_text}
+        {memory_context}
+
+        Analyze:
+        1. Underlying logic of the task.
+        2. Sequence of apps/tools needed.
+        3. Potential technical barriers on macOS.
+
+        Respond in English with a technical strategy.
+        """
+
+    @staticmethod
+    def atlas_plan_creation_prompt(
+        task_text: str,
+        strategy: str,
+        catalog: str,
+        vibe_directive: str = "",
+    ) -> str:
+        return f"""Create a Master Execution Plan.
+
+        REQUEST: {task_text}
+        STRATEGY: {strategy}
+        {vibe_directive}
+        {catalog}
+
+        CONSTRAINTS:
+        - Output JSON matching the format in your SYSTEM PROMPT.
+        - 'goal', 'reason', and 'action' descriptions MUST be in English (technical precision).
+        - 'voice_summary' MUST be in UKRAINIAN (for the user).
+        - **NO META-STEPS**: Skip steps like "Think about X", "Classify Y", or "Verify Z". Only plan DIRECT tasks.
+
+        Steps should be atomic and logical.
+        """
+
+    @staticmethod
+    def atlas_help_tetyana_prompt(
+        step_id: int,
+        error: str,
+        grisha_feedback: str,
+        context_info: dict,
+        current_plan: list,
+    ) -> str:
+        return f"""Tetyana is stuck at step {step_id}.
+
+ Error: {error}
+ {grisha_feedback}
+
+ SHARED CONTEXT: {context_info}
+
+ Current plan: {current_plan}
+
+ You are the Meta-Planner. Provide an ALTERNATIVE strategy or a structural correction.
+ IMPORTANT: If Grisha provided detailed feedback above, use it to understand EXACTLY what went wrong and avoid repeating the same mistake.
+
+ Output JSON matching the 'help_tetyana' schema:
+ {{
+     "reason": "English analysis of the failure (incorporate Grisha's feedback if available)",
+     "alternative_steps": [
+         {{"id": 1, "action": "English description", "expected_result": "English description"}}
+     ],
+     "voice_message": "Short Ukrainian message explaining the pivot to the user"
+ }}
+ """
+
+    @staticmethod
+    def atlas_evaluation_prompt(goal: str, history: str) -> str:
+        return f"""Review the execution of the following task.
+
+        GOAL: {goal}
+
+        EXECUTION HISTORY:
+        {history}
+
+        CRITICAL EVALUATION:
+        1. Did we achieve the actual goal?
+        2. Was the path efficient?
+        3. Is this a 'Golden Path' that should be a lesson for the future?
+
+        Respond STRICTLY in JSON:
+        {{
+            "quality_score": 0.0 to 1.0 (float),
+            "achieved": true/false,
+            "analysis": "Critique in UKRAINIAN",
+            "compressed_strategy": [
+                "Step 1 intent",
+                "Step 2 intent",
+                ...
+            ],
+            "should_remember": true/false
+        }}
+        """
+
+    @staticmethod
+    def grisha_strategist_system_prompt(decision_context: str) -> str:
+        return f"""You are a Verification Strategist. Consider the environment and choose the best verification stack.
+        ENVIRONMENT_DECISION: {decision_context}
+        When visual evidence is conclusive, prioritize Vision verification. When authoritative system/data checks are needed, prefer MCP servers (favor local Swift-based MCP servers when available). Output internal strategies in English."""
+
+    @staticmethod
     def tetyana_reflexion_prompt(
         step: str, error: str, history: list, tools_summary: str = ""
     ) -> str:
-        return """Analysis of Failure: {error}.
+        return f"""Analysis of Failure: {error}.
 
         Step: {step}
         History of attempts: {history}
@@ -81,7 +218,7 @@ class AgentPrompts:
 
     @staticmethod
     def tetyana_execution_prompt(step: str, context_results: list) -> str:
-        return """Execute this task step: {step}.
+        return f"""Execute this task step: {step}.
 Current context results: {context_results}
 Respond ONLY with JSON:
 {{
@@ -95,7 +232,7 @@ Respond ONLY with JSON:
     def grisha_strategy_prompt(
         step_action: str, expected_result: str, context: dict, overall_goal: str = ""
     ) -> str:
-        return """You are the Verification Strategist.
+        return f"""You are the Verification Strategist.
 
         OVERALL GOAL: {overall_goal}
         Step: {step_action}
@@ -119,7 +256,7 @@ Respond ONLY with JSON:
         history: list,
         overall_goal: str = "",
     ) -> str:
-        return """Verify the result of the following step using MCP tools FIRST, screenshots only when necessary.
+        return f"""Verify the result of the following step using MCP tools FIRST, screenshots only when necessary.
 
 OVERALL GOAL: {overall_goal}
 STRATEGIC GUIDANCE (Follow this!):
@@ -162,7 +299,7 @@ Example REJECTION response:
 
     @staticmethod
     def grisha_security_prompt(action: str) -> str:
-        return """Evaluate security for this action:
+        return f"""Evaluate security for this action:
 
 Action: {action}
 

@@ -156,7 +156,7 @@ def ensure_docker(force_check: bool = False):
                     flag_file.touch()
                 return True
             if i % 5 == 0:
-                logger.info(f"[Services] Waiting for Docker to wake up... ({i*2}s)")
+                logger.info(f"[Services] Waiting for Docker to wake up... ({i * 2}s)")
             time.sleep(2)
 
         logger.error("[Services] ✗ Docker failed to start within timeout.")

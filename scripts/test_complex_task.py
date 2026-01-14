@@ -45,7 +45,7 @@ async def main():
                 print(f"Виконано кроків: {len(steps)}")
                 for i, r in enumerate(steps):
                     s_icon = "✅" if r.get("success") else "❌"
-                    print(f"  {i+1}. {s_icon} {r.get('action')}")
+                    print(f"  {i + 1}. {s_icon} {r.get('action')}")
         else:
             print(f"Помилка: {result.get('error')}")
         print("=" * 50)

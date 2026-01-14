@@ -156,7 +156,7 @@ async def main():
     print(f"\n{Colors.BOLD}Statistics:{Colors.ENDC}")
     print(f"  • Total tools available: {total_tools}")
     print(f"  • Average response time: {avg_response:.2f}s")
-    print(f"  • Health score: {len(online)}/{len(servers)} ({100*len(online)//len(servers)}%)")
+    print(f"  • Health score: {len(online)}/{len(servers)} ({100 * len(online) // len(servers)}%)")
 
     print(f"\n{Colors.ENDC}")
 

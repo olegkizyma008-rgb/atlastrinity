@@ -57,7 +57,8 @@ def run_mcp_command(binary_path, commands):
 
 
 if __name__ == "__main__":
-    binary = "/Users/dev/Documents/GitHub/atlastrinity/vendor/mcp-server-macos-use/.build/release/mcp-server-macos-use"
+    project_root = "/Users/olegkizyma/Documents/GitHub/atlastrinity"
+    binary = f"{project_root}/vendor/mcp-server-macos-use/.build/arm64-apple-macosx/release/mcp-server-macos-use"
 
     # Task: Open TextEdit with explicit traversal
     commands = [
@@ -78,10 +79,11 @@ if __name__ == "__main__":
             tool_result = json.loads(tool_result_text)
             print(f"Tool Result Summary: {tool_result.keys()}")
             if "traversalAfter" in tool_result:
-                print(f"Traversal items count: {len(tool_result['traversalAfter'])}")
-                for item in tool_result["traversalAfter"][:10]:
+                elements = tool_result["traversalAfter"].get("elements", [])
+                print(f"Traversal items count: {len(elements)}")
+                for item in elements[:10]:
                     print(
-                        f" - {item.get('role', 'N/A')}: {item.get('title', 'N/A')} ({item.get('identifier', 'N/A')})"
+                        f" - {item.get('role', 'N/A')}: {item.get('text', 'N/A')} ({item.get('identifier', 'N/A')})"
                     )
             else:
                 print("No traversalAfter found.")

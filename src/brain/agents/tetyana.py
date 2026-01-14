@@ -728,6 +728,7 @@ Please type your response below and press Enter:
                         # small delay to allow rendering
                         await asyncio.sleep(1.5)
                         from ..logger import logger  # noqa: E402
+
                         # from ..mcp_manager import mcp_manager  # noqa: E402
 
                         logger.info(
@@ -1234,6 +1235,7 @@ Please type your response below and press Enter:
             try:
                 # from ..config import SCREENSHOTS_DIR, WORKSPACE_DIR  # noqa: E402
                 from ..logger import logger  # noqa: E402
+
                 # from ..mcp_manager import mcp_manager  # noqa: E402
 
                 ts = _time.strftime("%Y%m%d_%H%M%S")

@@ -439,6 +439,31 @@ class Atlas:
         """Retrieve Grisha's detailed rejection report from notes or memory"""
         from ..mcp_manager import mcp_manager  # noqa: E402
 
+        import ast  # noqa: E402
+        import json  # noqa: E402
+
+        def _parse_payload(payload: Any) -> Optional[Dict[str, Any]]:
+            if isinstance(payload, dict):
+                return payload
+            if hasattr(payload, "structuredContent") and isinstance(
+                getattr(payload, "structuredContent"), dict
+            ):
+                return payload.structuredContent.get("result", payload.structuredContent)
+            if hasattr(payload, "content"):
+                for item in getattr(payload, "content", []) or []:
+                    text = getattr(item, "text", None)
+                    if isinstance(text, dict):
+                        return text
+                    if isinstance(text, str):
+                        try:
+                            return json.loads(text)
+                        except Exception:
+                            try:
+                                return ast.literal_eval(text)
+                            except Exception:
+                                continue
+            return None
+
         # Try notes first (faster and cleaner)
         try:
             result = await mcp_manager.call_tool(
@@ -450,41 +475,21 @@ class Atlas:
                     "limit": 1,
                 },
             )
-
-            if result and hasattr(result, "content"):
-                for item in result.content:
-                    if hasattr(item, "text"):
-                        data = eval(item.text) if isinstance(item.text, str) else item.text
-                        if data.get("notes") and len(data["notes"]) > 0:
-                            note_id = data["notes"][0]["id"]
-                            # Read full note
-                            note_result = await mcp_manager.call_tool(
-                                "notes", "read_note", {"note_id": note_id}
-                            )
-                            if note_result and hasattr(note_result, "content"):
-                                for note_item in note_result.content:
-                                    if hasattr(note_item, "text"):
-                                        note_data = (
-                                            eval(note_item.text)
-                                            if isinstance(note_item.text, str)
-                                            else note_item.text
-                                        )
-                                        logger.info(
-                                            f"[ATLAS] Retrieved Grisha's report from notes for step {step_id}"
-                                        )
-                                        return note_data.get("content", "")
-            elif isinstance(result, dict) and result.get("success") and result.get("notes"):
-                notes = result["notes"]
-                if notes and len(notes) > 0:
-                    note_id = notes[0]["id"]
-                    note_result = await mcp_manager.call_tool(
-                        "notes", "read_note", {"note_id": note_id}
-                    )
-                    if isinstance(note_result, dict) and note_result.get("success"):
-                        logger.info(
-                            f"[ATLAS] Retrieved Grisha's report from notes for step {step_id}"
+            data = _parse_payload(result)
+            if data and data.get("notes"):
+                notes = data.get("notes") or []
+                if notes:
+                    note_id = notes[0].get("id")
+                    if note_id:
+                        note_result = await mcp_manager.call_tool(
+                            "notes", "read_note", {"note_id": note_id}
                         )
-                        return note_result.get("content", "")
+                        note_data = _parse_payload(note_result)
+                        if note_data and note_data.get("content"):
+                            logger.info(
+                                f"[ATLAS] Retrieved Grisha's report from notes for step {step_id}"
+                            )
+                            return note_data.get("content", "")
         except Exception as e:
             logger.warning(f"[ATLAS] Could not retrieve from notes: {e}")
 

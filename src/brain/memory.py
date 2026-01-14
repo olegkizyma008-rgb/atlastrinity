@@ -137,7 +137,7 @@ class LongTermMemory:
             doc_id = f"strategy_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{hash(task) % 10000}"
 
             # Create document text
-            steps_text = "\n".join([f"{i+1}. {s}" for i, s in enumerate(plan_steps)])
+            steps_text = "\n".join([f"{i + 1}. {s}" for i, s in enumerate(plan_steps)])
             document = f"Task: {task}\n\nSteps:\n{steps_text}\n\nOutcome: {outcome}"
 
             metadata = {
