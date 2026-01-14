@@ -198,26 +198,38 @@ class Atlas:
                 "initial_response": initial_response,
             }
 
-        prompt = f"""Analyze the user request and decide if it's a simple conversation or a technical task.
+        # Check for software development keywords
+        dev_keywords_ua = ["напиши код", "створи програму", "розроби", "напрограмуй", "скрипт", "веб-сайт", "апі", "бекенд", "фронтенд", "додаток"]
+        dev_keywords_en = ["create app", "build", "develop", "code", "implement", "write script", "api", "website", "frontend", "backend", "program", "software"]
+        
+        is_development = (
+            any(kw in req_lower for kw in dev_keywords_ua) or
+            any(kw in req_lower for kw in dev_keywords_en)
+        )
+
+        prompt = f"""Analyze the user request and decide if it's a simple conversation, a technical task, or a SOFTWARE DEVELOPMENT task.
 
 User Request: {user_request}
 Context: {context or 'None'}
 Conversation History: {history or 'None'}
 
 CRITICAL CLASSIFICATION RULES:
-1. 'chat' - Greetings, 'How are you', jokes, appreciation (thanks), or SIMPLE CONFIRMATIONS (like 'Yes', 'Ok', 'Do it') that refer to the IMMEDIATE previous assistant question.
-2. 'task' - Direct instructions to DO something new (open app, run command, search file).
+1. 'chat' - Greetings, 'How are you', jokes, appreciation (thanks), or SIMPLE CONFIRMATIONS.
+2. 'task' - Direct instructions to DO something (open app, run command, search file).
+3. 'development' - Requests to CREATE, BUILD, or WRITE software, code, scripts, apps, websites, APIs.
+   Examples: "Create a Python script", "Build a website", "Write an API", "Develop a bot"
 
-FOCUS: If the user says 'Yes' or 'Do it', look ONLY at the very last message from you (Assistant). If you just asked to show time, 'Yes' means show time. IGNORE tasks from older history.
+If request is 'development', set complexity to 'high' and use_vibe to true.
 
 ALL textual responses (reason, initial_response) MUST be in UKRAINIAN.
 
 Respond STRICTLY in JSON:
 {{
-    "intent": "chat" or "task",
+    "intent": "chat" or "task" or "development",
     "reason": "Explain your choice in Ukrainian",
     "enriched_request": "Detailed description of the request (English)",
     "complexity": "low/medium/high",
+    "use_vibe": true/false (true for development tasks),
     "initial_response": "Short reply to user ONLY if intent is 'chat' (Ukrainian), else null"
 }}
 """
@@ -326,10 +338,25 @@ Do not suggest creating a plan, just talk."""
             simulation_result = "Standard execution strategy."
 
         # 2. PLAN FORMULATION
+        use_vibe = enriched_request.get("use_vibe", False) or enriched_request.get("intent") == "development"
+        vibe_directive = ""
+        
+        if use_vibe:
+            vibe_directive = """
+            CRITICAL DEVELOPMENT OVERRIDE:
+            This is a SOFTWARE DEVELOPMENT task. You MUST delegate to 'vibe' server (Mistral AI) for:
+            1. Planning architecture (vibe_smart_plan)
+            2. Writing code (vibe_prompt)
+            3. Debugging (vibe_analyze_error)
+            
+            Do NOT attempt to write complex code yourself via filesystem. Delegate to Vibe.
+            """
+
         prompt = f"""Create a Master Execution Plan.
 
         REQUEST: {task_text}
         STRATEGY: {simulation_result}
+        {vibe_directive}
         {shared_context.available_mcp_catalog if hasattr(shared_context, 'available_mcp_catalog') else ''}
 
         CONSTRAINTS:
