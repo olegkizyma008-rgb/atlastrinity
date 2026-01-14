@@ -631,12 +631,12 @@ Please type your response below and press Enter:
                 logger.info(f"[TETYANA] Path resolved: {original} -> {args['path']}")
 
         # Patches for hallucinated plural arguments
-        if tool_name == "fetch" or (explicit_server == "fetch"):
-             if "urls" in args and "url" not in args:
-                 urls = args["urls"]
-                 if isinstance(urls, list) and len(urls) > 0:
-                     args["url"] = urls[0] # Take first for now
-                     logger.info(f"[TETYANA] Argument patch: urls -> url (using {args['url']})")
+        if tool_name == "fetch" or tool_call.get("server") == "fetch":
+            if "urls" in args and "url" not in args:
+                urls = args["urls"]
+                if isinstance(urls, list) and len(urls) > 0:
+                    args["url"] = urls[0]  # Take first for now
+                    logger.info(f"[TETYANA] Argument patch: urls -> url (using {args['url']})")
 
         # Direct MCP call
         if tool_name == "mcp":
