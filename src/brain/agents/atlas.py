@@ -32,6 +32,7 @@ from ..context import shared_context  # noqa: E402
 from ..logger import logger  # noqa: E402
 from ..memory import long_term_memory  # noqa: E402
 from ..prompts import AgentPrompts  # noqa: E402
+from ..prompts.atlas_chat import generate_atlas_chat_prompt  # noqa: E402
 
 
 @dataclass
@@ -238,21 +239,96 @@ class Atlas:
             }
 
     async def chat(self, user_request: str, history: List[Any] = None) -> str:
-        """Friendly chat mode with context memory"""
+        """
+        Omni-Knowledge Chat Mode.
+        Integrates Graph Memory, Vector Memory, and System Context for deep awareness.
+        """
         from langchain_core.messages import HumanMessage, SystemMessage
+        from ..mcp_manager import mcp_manager
 
-        chat_prompt = AgentPrompts.atlas_chat_prompt()
+        # 1. Gather Context from Memory Arsenal
+        graph_context = ""
+        vector_context = ""
+        
+        # A. Graph Memory (MCP Search)
+        try:
+            # Search for relevant entities in the Knowledge Graph
+            graph_res = await mcp_manager.call_tool(
+                "memory", "search_nodes", {"query": user_request}
+            )
+            
+            # Format graph result
+            if isinstance(graph_res, dict) and "entities" in graph_res:
+                entities = graph_res.get("entities", [])
+                if entities:
+                    graph_chunks = []
+                    for e in entities[:3]: # Top 3 entities
+                        name = e.get("name", "Unknown")
+                        obs = "; ".join(e.get("observations", [])[:2])
+                        graph_chunks.append(f"Entity: {name} | Info: {obs}")
+                    graph_context = "\n".join(graph_chunks)
+            elif hasattr(graph_res, "content"):
+                # Handle FastMCP text content
+                content_list = getattr(graph_res, "content", [])
+                text_content = [getattr(c, "text", "") for c in content_list if hasattr(c, "text")]
+                graph_context = "\n".join(text_content)[:800]
+                
+        except Exception as e:
+            logger.warning(f"[ATLAS] Chat Memory lookup failed: {e}")
 
-        # Build message history
-        messages = [SystemMessage(content=chat_prompt)]
+        # B. Vector Memory (ChromaDB)
+        try:
+            if long_term_memory.available:
+                # Look for similar past successful tasks/conversations
+                similar_tasks = long_term_memory.recall_similar_tasks(user_request, n_results=2)
+                if similar_tasks:
+                    vector_context += "\nRelated Tasks:\n" + "\n".join([f"- {s['document'][:200]}..." for s in similar_tasks])
+                
+                # Look for lessons learned (errors) relevant to this topic
+                similar_errors = long_term_memory.recall_similar_errors(user_request, n_results=1)
+                if similar_errors:
+                    vector_context += "\nRelated Lessons:\n" + "\n".join([f"- {s['document'][:200]}..." for s in similar_errors])
+        except Exception as e:
+            logger.warning(f"[ATLAS] Vector Memory lookup failed: {e}")
 
-        # Add historical context (last 5-10 messages for speed)
+        # C. System Status
+        try:
+            # Snapshot of shared context
+            ctx_snapshot = shared_context.to_dict()
+            system_status = f"Current Project: {ctx_snapshot.get('project_root', 'Unknown')}\n"
+            system_status += f"Variables: {ctx_snapshot.get('variables', {})}"
+        except Exception:
+            system_status = "System running."
+
+        # D. Agent Capabilities info
+        agent_capabilities = """
+        - TETYANA: Executor (Terminal, Filesystem, Browser). Contact for ACTIONS.
+        - GRISHA: Verifier (Vision, Screenshots, Security). Contact for AUDIT.
+        - VIBE: Developer (Coding, Debugging, Self-Healing). Contact for CODE.
+        """
+
+        # 2. Generate Super Prompt
+        system_prompt_text = generate_atlas_chat_prompt(
+            user_query=user_request,
+            graph_context=graph_context,
+            vector_context=vector_context,
+            system_status=system_status,
+            agent_capabilities=agent_capabilities
+        )
+
+        # 3. Invoke LLM
+        messages = [SystemMessage(content=system_prompt_text)]
+        
+        # Add historical context (last 10 messages)
         if history:
             messages.extend(history[-10:])
-
+        
+        # Add current user message
         messages.append(HumanMessage(content=user_request))
 
+        logger.info(f"[ATLAS] Generating chat response with full memory context...")
         response = await self.llm.ainvoke(messages)
+        
         if hasattr(response, "content"):
             return response.content
         return str(response)
