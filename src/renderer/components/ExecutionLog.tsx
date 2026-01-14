@@ -21,9 +21,8 @@ interface ExecutionLogProps {
 
 const ExecutionLog: React.FC<ExecutionLogProps> = ({ logs }) => {
   // Filter out noisy connection logs
-  const filteredLogs = logs.filter(log =>
-    !log.message.includes("GET /api/state") &&
-    !log.message.includes("POST /api/chat")
+  const filteredLogs = logs.filter(
+    (log) => !log.message.includes('GET /api/state') && !log.message.includes('POST /api/chat')
   );
 
   const logsEndRef = useRef<HTMLDivElement>(null);
@@ -44,7 +43,6 @@ const ExecutionLog: React.FC<ExecutionLogProps> = ({ logs }) => {
     });
   };
 
-
   return (
     <div className="flex-1 flex flex-col overflow-hidden font-mono">
       {/* Window Header - Decorative Controls */}
@@ -55,21 +53,49 @@ const ExecutionLog: React.FC<ExecutionLogProps> = ({ logs }) => {
           <div className="w-[5px] h-[5px] rounded-full bg-[#27C93F]/40"></div>
         </div>
         <div className="w-[1px] h-2 bg-white/10 mx-2"></div>
-        <span className="text-[6px] tracking-[0.4em] uppercase font-bold text-white/50">core::log_stream</span>
+        <span className="text-[6px] tracking-[0.4em] uppercase font-bold text-white/50">
+          core::log_stream
+        </span>
       </div>
 
       <div className="flex-1 overflow-y-auto p-1 scrollbar-thin">
         {filteredLogs.map((log) => (
-          <div key={log.id} className="flex flex-col mb-2 animate-fade-in group hover:bg-white/5 px-1 py-1 rounded transition-colors">
+          <div
+            key={log.id}
+            className="flex flex-col mb-2 animate-fade-in group hover:bg-white/5 px-1 py-1 rounded transition-colors"
+          >
             <div className="flex items-center mb-1">
               <div className="flex items-center gap-4 filter grayscale opacity-20 group-hover:grayscale-0 group-hover:opacity-40 transition-all duration-500">
-                <span className="text-[6.5px] font-medium tracking-[0.2em] uppercase"
-                  style={{ color: log.agent === 'GRISHA' ? 'var(--grisha-orange)' : log.agent === 'TETYANA' ? 'var(--tetyana-green)' : log.agent === 'USER' ? '#FFFFFF' : 'var(--atlas-blue)', fontFamily: 'Outfit' }}>
+                <span
+                  className="text-[6.5px] font-medium tracking-[0.2em] uppercase"
+                  style={{
+                    color:
+                      log.agent === 'GRISHA'
+                        ? 'var(--grisha-orange)'
+                        : log.agent === 'TETYANA'
+                          ? 'var(--tetyana-green)'
+                          : log.agent === 'USER'
+                            ? '#FFFFFF'
+                            : 'var(--atlas-blue)',
+                    fontFamily: 'Outfit',
+                  }}
+                >
                   {log.agent}
                 </span>
 
-                <div className="flex items-center gap-3 text-[6.5px] font-mono font-medium tracking-[0.05em] uppercase"
-                  style={{ color: log.agent === 'GRISHA' ? 'var(--grisha-orange)' : log.agent === 'TETYANA' ? 'var(--tetyana-green)' : log.agent === 'USER' ? '#FFFFFF' : 'var(--atlas-blue)' }}>
+                <div
+                  className="flex items-center gap-3 text-[6.5px] font-mono font-medium tracking-[0.05em] uppercase"
+                  style={{
+                    color:
+                      log.agent === 'GRISHA'
+                        ? 'var(--grisha-orange)'
+                        : log.agent === 'TETYANA'
+                          ? 'var(--tetyana-green)'
+                          : log.agent === 'USER'
+                            ? '#FFFFFF'
+                            : 'var(--atlas-blue)',
+                  }}
+                >
                   <span className="tracking-tighter">{formatTime(log.timestamp)}</span>
                   <span className="font-bold">{log.type.toUpperCase()}</span>
                 </div>
@@ -79,7 +105,10 @@ const ExecutionLog: React.FC<ExecutionLogProps> = ({ logs }) => {
             {/* Content Row */}
             <div className="flex-1 flex flex-col pl-0.5">
               {/* Message */}
-              <span className="text-[8.5px] font-light leading-relaxed break-words text-white/50 group-hover:text-white/85 transition-colors font-mono" style={{ fontFamily: 'JetBrains Mono' }}>
+              <span
+                className="text-[8.5px] font-light leading-relaxed break-words text-white/50 group-hover:text-white/85 transition-colors font-mono"
+                style={{ fontFamily: 'JetBrains Mono' }}
+              >
                 {typeof log.message === 'object' ? JSON.stringify(log.message) : log.message}
               </span>
             </div>

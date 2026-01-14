@@ -17,12 +17,10 @@ interface ChatPanelProps {
   messages: Message[];
 }
 
-const ChatPanel: React.FC<ChatPanelProps> = ({
-  messages
-}) => {
+const ChatPanel: React.FC<ChatPanelProps> = ({ messages }) => {
   // STRICT FILTER: Only User and Agents (ATLAS, GRISHA, TETYANA)
   // Hide SYSTEM logs from chat stream
-  const filteredMessages = messages.filter(m => m.agent !== 'SYSTEM');
+  const filteredMessages = messages.filter((m) => m.agent !== 'SYSTEM');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -37,13 +35,18 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   const getAgentColor = (agent: string) => {
     const a = agent.toUpperCase().trim();
     switch (a) {
-      case 'GRISHA': return 'var(--grisha-orange, #FFB800)';
-      case 'TETYANA': return 'var(--tetyana-green, #00FF88)';
-      case 'USER': return '#FFFFFF';
-      case 'SYSTEM': return 'var(--atlas-blue, #00A3FF)';
-      default: return 'var(--atlas-blue, #00A3FF)';
+      case 'GRISHA':
+        return 'var(--grisha-orange, #FFB800)';
+      case 'TETYANA':
+        return 'var(--tetyana-green, #00FF88)';
+      case 'USER':
+        return '#FFFFFF';
+      case 'SYSTEM':
+        return 'var(--atlas-blue, #00A3FF)';
+      default:
+        return 'var(--atlas-blue, #00A3FF)';
     }
-  }
+  };
 
   return (
     <div className="h-full flex flex-col p-4 font-mono">
@@ -61,22 +64,33 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           </div>
         ) : (
           <div className="flex flex-col gap-2 py-1">
-            {filteredMessages.map(msg => (
+            {filteredMessages.map((msg) => (
               <div key={msg.id} className="animate-fade-in group mb-3">
                 <div className="flex items-center mb-1.5">
                   <div className="flex items-center gap-4 filter grayscale opacity-20 group-hover:grayscale-0 group-hover:opacity-40 transition-all duration-500">
-                    <span className="text-[6.5px] font-medium tracking-[0.1em] uppercase"
-                      style={{ color: getAgentColor(msg.agent), fontFamily: 'Outfit' }}>
+                    <span
+                      className="text-[6.5px] font-medium tracking-[0.1em] uppercase"
+                      style={{ color: getAgentColor(msg.agent), fontFamily: 'Outfit' }}
+                    >
                       {msg.agent}
                     </span>
-                    <span className="text-[6.5px] font-mono tracking-tighter uppercase font-medium"
-                      style={{ color: getAgentColor(msg.agent) }}>
-                      {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    <span
+                      className="text-[6.5px] font-mono tracking-tighter uppercase font-medium"
+                      style={{ color: getAgentColor(msg.agent) }}
+                    >
+                      {msg.timestamp.toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                      })}
                     </span>
                   </div>
                 </div>
 
-                <div className="text-[8.5px] font-[200] leading-relaxed break-words pl-0.5 py-0.5 text-white/50 group-hover:text-white/85 transition-colors" style={{ fontFamily: 'Outfit', letterSpacing: '0.02em' }}>
+                <div
+                  className="text-[8.5px] font-[200] leading-relaxed break-words pl-0.5 py-0.5 text-white/50 group-hover:text-white/85 transition-colors"
+                  style={{ fontFamily: 'Outfit', letterSpacing: '0.02em' }}
+                >
                   {msg.text}
                 </div>
               </div>

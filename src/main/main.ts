@@ -15,128 +15,127 @@ const isDev = process.env.NODE_ENV === 'development';
 
 // Check if first-run setup is needed
 function isFirstRun(): boolean {
-    const setupMarker = path.join(os.homedir(), '.config/atlastrinity/setup_complete');
-    return !fs.existsSync(setupMarker);
+  const setupMarker = path.join(os.homedir(), '.config/atlastrinity/setup_complete');
+  return !fs.existsSync(setupMarker);
 }
 
 // Run first-run setup in a terminal window
 async function runFirstRunSetup(): Promise<boolean> {
+  // Find Python executable
+  let pythonExec = 'python3';
+  const bundledPython = path.join(process.resourcesPath, '.venv/bin/python');
+  if (fs.existsSync(bundledPython)) {
+    pythonExec = bundledPython;
+  }
 
-    // Find Python executable
-    let pythonExec = 'python3';
-    const bundledPython = path.join(process.resourcesPath, '.venv/bin/python');
-    if (fs.existsSync(bundledPython)) {
-        pythonExec = bundledPython;
-    }
+  console.log('[SETUP] Running first-run installer...');
 
-    console.log('[SETUP] Running first-run installer...');
-
-    return new Promise((resolve) => {
-        const setupProcess = spawn(pythonExec, ['-m', 'brain.first_run_installer'], {
-            cwd: process.resourcesPath,
-            stdio: 'inherit', // Show output in terminal
-            env: {
-                ...process.env,
-                PYTHONPATH: process.resourcesPath,
-                PATH: `${path.dirname(pythonExec)}:/opt/homebrew/bin:${process.env.PATH}`
-            }
-        });
-
-        setupProcess.on('close', (code: number) => {
-            console.log(`[SETUP] First-run installer exited with code ${code}`);
-            resolve(code === 0);
-        });
-
-        setupProcess.on('error', (err: Error) => {
-            console.error('[SETUP] Failed to run installer:', err);
-            resolve(false);
-        });
+  return new Promise((resolve) => {
+    const setupProcess = spawn(pythonExec, ['-m', 'brain.first_run_installer'], {
+      cwd: process.resourcesPath,
+      stdio: 'inherit', // Show output in terminal
+      env: {
+        ...process.env,
+        PYTHONPATH: process.resourcesPath,
+        PATH: `${path.dirname(pythonExec)}:/opt/homebrew/bin:${process.env.PATH}`,
+      },
     });
+
+    setupProcess.on('close', (code: number) => {
+      console.log(`[SETUP] First-run installer exited with code ${code}`);
+      resolve(code === 0);
+    });
+
+    setupProcess.on('error', (err: Error) => {
+      console.error('[SETUP] Failed to run installer:', err);
+      resolve(false);
+    });
+  });
 }
 
 async function createWindow(): Promise<void> {
-    // First-run setup (production only)
-    if (!isDev && isFirstRun()) {
-        console.log('[SETUP] First run detected, launching setup...');
-        const setupSuccess = await runFirstRunSetup();
-        if (!setupSuccess) {
-            console.error('[SETUP] First-run setup failed, but continuing...');
-        }
+  // First-run setup (production only)
+  if (!isDev && isFirstRun()) {
+    console.log('[SETUP] First run detected, launching setup...');
+    const setupSuccess = await runFirstRunSetup();
+    if (!setupSuccess) {
+      console.error('[SETUP] First-run setup failed, but continuing...');
     }
+  }
 
-    // Check required permissions first
-    const permissionsOk = await checkPermissions();
-    if (!permissionsOk) {
-        await requestPermissions();
+  // Check required permissions first
+  const permissionsOk = await checkPermissions();
+  if (!permissionsOk) {
+    await requestPermissions();
+  }
+
+  mainWindow = new BrowserWindow({
+    width: 1400,
+    height: 900,
+    minWidth: 1200,
+    minHeight: 700,
+    frame: false,
+    transparent: true,
+    vibrancy: 'under-window',
+    visualEffectState: 'active',
+    titleBarStyle: 'hidden',
+    backgroundColor: '#00000000',
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+      webSecurity: false, // Allow local connections from file://
+    },
+  });
+
+  // Hide native macOS window buttons if on Darwin
+  if (process.platform === 'darwin') {
+    mainWindow.setWindowButtonVisibility(false);
+  }
+
+  // Load the app
+  if (isDev) {
+    await mainWindow.loadURL('http://localhost:3000');
+    mainWindow.webContents.openDevTools();
+
+    // В dev режимі Python сервер запускається через npm run dev:brain
+    // НЕ запускаємо тут, щоб уникнути конфлікту на порту 8000
+    // startPythonServerDev();
+  } else {
+    await mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+
+    // Spawn Python Server in Production
+    startPythonServer();
+  }
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+
+  // Protect against focus loss causing black screen
+  // Вимкнено, щоб не перемикати фокус автоматично
+  // mainWindow.on('blur', () => {
+  //     console.log('[ELECTRON] Window lost focus - monitoring for recovery');
+  //
+  //     // Set timeout to restore focus if needed
+  //     setTimeout(() => {
+  //         if (mainWindow && !mainWindow.isFocused()) {
+  //             console.log('[ELECTRON] Auto-restoring window focus');
+  //             mainWindow.focus();
+  //         }
+  //     }, 500);
+  // });
+
+  // Protect renderer from hanging
+  mainWindow.webContents.on('unresponsive', () => {
+    console.error('[ELECTRON] Renderer became unresponsive - attempting reload');
+    if (mainWindow) {
+      mainWindow.webContents.reload();
     }
+  });
 
-    mainWindow = new BrowserWindow({
-        width: 1400,
-        height: 900,
-        minWidth: 1200,
-        minHeight: 700,
-        frame: false,
-        transparent: true,
-        vibrancy: 'under-window',
-        visualEffectState: 'active',
-        titleBarStyle: 'hidden',
-        backgroundColor: '#00000000',
-        webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false,
-            webSecurity: false, // Allow local connections from file://
-        },
-    });
-
-    // Hide native macOS window buttons if on Darwin
-    if (process.platform === 'darwin') {
-        mainWindow.setWindowButtonVisibility(false);
-    }
-
-    // Load the app
-    if (isDev) {
-        await mainWindow.loadURL('http://localhost:3000');
-        mainWindow.webContents.openDevTools();
-
-        // В dev режимі Python сервер запускається через npm run dev:brain
-        // НЕ запускаємо тут, щоб уникнути конфлікту на порту 8000
-        // startPythonServerDev();
-    } else {
-        await mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
-
-        // Spawn Python Server in Production
-        startPythonServer();
-    }
-
-    mainWindow.on('closed', () => {
-        mainWindow = null;
-    });
-
-    // Protect against focus loss causing black screen
-    // Вимкнено, щоб не перемикати фокус автоматично
-    // mainWindow.on('blur', () => {
-    //     console.log('[ELECTRON] Window lost focus - monitoring for recovery');
-    //     
-    //     // Set timeout to restore focus if needed
-    //     setTimeout(() => {
-    //         if (mainWindow && !mainWindow.isFocused()) {
-    //             console.log('[ELECTRON] Auto-restoring window focus');
-    //             mainWindow.focus();
-    //         }
-    //     }, 500);
-    // });
-
-    // Protect renderer from hanging
-    mainWindow.webContents.on('unresponsive', () => {
-        console.error('[ELECTRON] Renderer became unresponsive - attempting reload');
-        if (mainWindow) {
-            mainWindow.webContents.reload();
-        }
-    });
-
-    mainWindow.webContents.on('responsive', () => {
-        console.log('[ELECTRON] Renderer became responsive again');
-    });
+  mainWindow.webContents.on('responsive', () => {
+    console.log('[ELECTRON] Renderer became responsive again');
+  });
 }
 
 // Python Server Management
@@ -187,120 +186,127 @@ function startPythonServerDev() {
 */
 
 function startPythonServer() {
+  // Robust Python discovery
+  let pythonExec = process.env.ATLASTRINITY_PYTHON || 'python3'; // Default fallback
 
-    // Robust Python discovery
-    let pythonExec = process.env.ATLASTRINITY_PYTHON || 'python3'; // Default fallback
+  // 1. Try app-local .venv (dev/local prod test)
+  const projectVenvPath = path.join(app.getAppPath(), '.venv/bin/python');
 
-    // 1. Try app-local .venv (dev/local prod test)
-    const projectVenvPath = path.join(app.getAppPath(), '.venv/bin/python');
+  // 2. Try packaged .venv if it was bundled (Portable mode)
+  // When moved to /Applications, app.getAppPath() points to the app content
+  const bundledVenvPath = path.join(process.resourcesPath, '.venv/bin/python');
 
-    // 2. Try packaged .venv if it was bundled (Portable mode)
-    // When moved to /Applications, app.getAppPath() points to the app content
-    const bundledVenvPath = path.join(process.resourcesPath, '.venv/bin/python');
+  if (fs.existsSync(bundledVenvPath)) {
+    pythonExec = bundledVenvPath;
+  } else if (fs.existsSync(projectVenvPath)) {
+    pythonExec = projectVenvPath;
+  }
 
-    if (fs.existsSync(bundledVenvPath)) {
-        pythonExec = bundledVenvPath;
-    } else if (fs.existsSync(projectVenvPath)) {
-        pythonExec = projectVenvPath;
+  console.log(`Starting Python server with: ${pythonExec}`);
+  console.log(`Working directory: ${process.resourcesPath}`);
+
+  pythonProcess = spawn(pythonExec, ['-m', 'brain.server'], {
+    cwd: process.resourcesPath,
+    env: {
+      ...process.env,
+      PYTHONUNBUFFERED: '1',
+      PYTHONPATH: process.resourcesPath,
+      PATH: `${path.dirname(pythonExec)}:${process.env.PATH}`, // Add venv/bin to PATH
+    },
+  });
+
+  pythonProcess.stdout?.on('data', (data: Buffer) => {
+    const message = data.toString();
+    console.log(`[Python]: ${message}`);
+    if (mainWindow) {
+      mainWindow.webContents.executeJavaScript(
+        `console.log('[Python]: ' + ${JSON.stringify(message)})`
+      );
     }
+  });
 
-    console.log(`Starting Python server with: ${pythonExec}`);
-    console.log(`Working directory: ${process.resourcesPath}`);
+  pythonProcess.stderr?.on('data', (data: Buffer) => {
+    const message = data.toString();
+    console.error(`[Python Err]: ${message}`);
+    if (mainWindow) {
+      mainWindow.webContents.executeJavaScript(
+        `console.error('[Python Err]: ' + ${JSON.stringify(message)})`
+      );
+    }
+  });
 
-    pythonProcess = spawn(pythonExec, ['-m', 'brain.server'], {
-        cwd: process.resourcesPath,
-        env: {
-            ...process.env,
-            PYTHONUNBUFFERED: '1',
-            PYTHONPATH: process.resourcesPath,
-            PATH: `${path.dirname(pythonExec)}:${process.env.PATH}` // Add venv/bin to PATH
-        }
-    });
+  pythonProcess.on('error', (err: Error) => {
+    console.error(`Failed to start Python server: ${err}`);
+    if (mainWindow) {
+      mainWindow.webContents.executeJavaScript(
+        `console.error('CRITICAL: Failed to start Python server: ' + ${JSON.stringify(err.message)})`
+      );
+    }
+  });
 
-    pythonProcess.stdout?.on('data', (data: Buffer) => {
-        const message = data.toString();
-        console.log(`[Python]: ${message}`);
-        if (mainWindow) {
-            mainWindow.webContents.executeJavaScript(`console.log('[Python]: ' + ${JSON.stringify(message)})`);
-        }
-    });
-
-    pythonProcess.stderr?.on('data', (data: Buffer) => {
-        const message = data.toString();
-        console.error(`[Python Err]: ${message}`);
-        if (mainWindow) {
-            mainWindow.webContents.executeJavaScript(`console.error('[Python Err]: ' + ${JSON.stringify(message)})`);
-        }
-    });
-
-    pythonProcess.on('error', (err: Error) => {
-        console.error(`Failed to start Python server: ${err}`);
-        if (mainWindow) {
-            mainWindow.webContents.executeJavaScript(`console.error('CRITICAL: Failed to start Python server: ' + ${JSON.stringify(err.message)})`);
-        }
-    });
-
-    pythonProcess.on('close', (code: number | null) => {
-        console.log(`Python process exited with code ${code}`);
-        if (mainWindow && code !== 0 && code !== null) {
-            mainWindow.webContents.executeJavaScript(`console.error('CRITICAL: Python server exited with code ' + ${code})`);
-        }
-    });
+  pythonProcess.on('close', (code: number | null) => {
+    console.log(`Python process exited with code ${code}`);
+    if (mainWindow && code !== 0 && code !== null) {
+      mainWindow.webContents.executeJavaScript(
+        `console.error('CRITICAL: Python server exited with code ' + ${code})`
+      );
+    }
+  });
 }
 
 // IPC Handlers for renderer communication
 ipcMain.handle('get-system-info', async () => {
-    return {
-        platform: process.platform,
-        arch: process.arch,
-        version: app.getVersion(),
-    };
+  return {
+    platform: process.platform,
+    arch: process.arch,
+    version: app.getVersion(),
+  };
 });
 
 ipcMain.handle('check-accessibility', async () => {
-    return systemPreferences.isTrustedAccessibilityClient(false);
+  return systemPreferences.isTrustedAccessibilityClient(false);
 });
 
 ipcMain.handle('request-accessibility', async () => {
-    return systemPreferences.isTrustedAccessibilityClient(true);
+  return systemPreferences.isTrustedAccessibilityClient(true);
 });
 
 // App lifecycle
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
-    // В development режимі завжди закриваємо додаток (включно з macOS)
-    // В production на macOS - стандартна поведінка (додаток залишається в dock)
-    if (isDev || process.platform !== 'darwin') {
-        app.quit();
-    }
+  // В development режимі завжди закриваємо додаток (включно з macOS)
+  // В production на macOS - стандартна поведінка (додаток залишається в dock)
+  if (isDev || process.platform !== 'darwin') {
+    app.quit();
+  }
 });
 
 // Ensure Python server is killed when app quits
 app.on('before-quit', () => {
-    if (pythonProcess) {
-        console.log('Quitting: Killing Python server...');
-        pythonProcess.kill('SIGTERM');
-        pythonProcess = null;
-    }
+  if (pythonProcess) {
+    console.log('Quitting: Killing Python server...');
+    pythonProcess.kill('SIGTERM');
+    pythonProcess = null;
+  }
 });
 
 app.on('will-quit', () => {
-    if (pythonProcess) {
-        pythonProcess.kill('SIGKILL');
-    }
+  if (pythonProcess) {
+    pythonProcess.kill('SIGKILL');
+  }
 });
 
 app.on('activate', () => {
-    if (mainWindow === null) {
-        createWindow();
-    }
+  if (mainWindow === null) {
+    createWindow();
+  }
 });
 
 // Handle certificate errors in development
 if (isDev) {
-    app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
-        event.preventDefault();
-        callback(true);
-    });
+  app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
+    event.preventDefault();
+    callback(true);
+  });
 }

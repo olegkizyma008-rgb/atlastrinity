@@ -32,7 +32,7 @@ declare global {
 const CommandLine: React.FC<CommandLineProps> = ({
   onCommand,
   isVoiceEnabled = true,
-  onToggleVoice
+  onToggleVoice,
 }) => {
   const [input, setInput] = useState('');
   const [isListening, setIsListening] = useState(false);
@@ -89,10 +89,10 @@ const CommandLine: React.FC<CommandLineProps> = ({
 
     silenceTimeoutRef.current = setTimeout(() => {
       const textToSend = pendingTextRef.current.trim();
-      console.log('⏱️ Silence timeout, sending:', textToSend);
+      // console.log('⏱️ Silence timeout, sending:', textToSend);
 
       if (textToSend) {
-        console.log('🚀 Auto-sending:', textToSend);
+        // console.log('🚀 Auto-sending:', textToSend);
         onCommand(textToSend);
         setInput('');
         pendingTextRef.current = '';
@@ -102,7 +102,7 @@ const CommandLine: React.FC<CommandLineProps> = ({
         setTimeout(() => {
           if (isListeningRef.current) {
             setSttStatus('🎙️ Слухаю...');
-            console.log('🔄 Resuming listening after 5s pause');
+            // console.log('🔄 Resuming listening after 5s pause');
           } else {
             setSttStatus('');
           }
@@ -115,118 +115,124 @@ const CommandLine: React.FC<CommandLineProps> = ({
 
   // Обробка відповіді від Smart STT
   // ВАЖЛИВО: ця функція повинна бути визначена ПЕРЕД processAudioChunk
-  const handleSTTResponse = useCallback((data: SmartSTTResponse) => {
-    const { speech_type, combined_text, should_send, text } = data;
+  const handleSTTResponse = useCallback(
+    (data: SmartSTTResponse) => {
+      const { speech_type, combined_text, text } = data;
 
-    console.log(`📊 Speech type: ${speech_type}, Should send: ${should_send}, Text: "${text}"`);
+      // console.log(`📊 Speech type: ${speech_type}, Should send: ${should_send}, Text: "${text}"`);
 
-    switch (speech_type) {
-      case 'silence':
-        setSttStatus('🔇 Тиша...');
-        // При тиші відправляємо накопичений текст після таймауту
-        if (pendingTextRef.current.trim()) {
-          scheduleSend();
-        }
-        break;
+      switch (speech_type) {
+        case 'silence':
+          setSttStatus('🔇 Тиша...');
+          // При тиші відправляємо накопичений текст після таймауту
+          if (pendingTextRef.current.trim()) {
+            scheduleSend();
+          }
+          break;
 
-      case 'noise':
-        setSttStatus('🔊 Фоновий шум');
-        break;
+        case 'noise':
+          setSttStatus('🔊 Фоновий шум');
+          break;
 
-      case 'other_voice':
-        setSttStatus('👤 Інший голос');
-        break;
+        case 'other_voice':
+          setSttStatus('👤 Інший голос');
+          break;
 
-      case 'off_topic':
-        setSttStatus('💬 Стороння розмова');
-        break;
+        case 'off_topic':
+          setSttStatus('💬 Стороння розмова');
+          break;
 
-      case 'same_user':
-      case 'new_phrase':
-        // Оновлюємо текст
-        if (text && text.trim()) {
-          pendingTextRef.current = combined_text;
-          setInput(combined_text);
-          setSttStatus(`✅ ${text.slice(0, 20)}...`);
-          console.log('📝 Updated text:', combined_text);
+        case 'same_user':
+        case 'new_phrase':
+          // Оновлюємо текст
+          if (text && text.trim()) {
+            pendingTextRef.current = combined_text;
+            setInput(combined_text);
+            setSttStatus(`✅ ${text.slice(0, 20)}...`);
+            // console.log('📝 Updated text:', combined_text);
 
-          // Перезапускаємо таймер для відправки
-          scheduleSend();
-        } else {
-          setSttStatus('✅ Розпізнано');
-        }
-        break;
+            // Перезапускаємо таймер для відправки
+            scheduleSend();
+          } else {
+            setSttStatus('✅ Розпізнано');
+          }
+          break;
 
-      default:
-        console.warn('Unknown speech type:', speech_type);
-        setSttStatus('❓ Невідомий тип');
-    }
-  }, [scheduleSend]);
+        default:
+          console.warn('Unknown speech type:', speech_type);
+          setSttStatus('❓ Невідомий тип');
+      }
+    },
+    [scheduleSend]
+  );
 
   // Відправка аудіо на розумний STT
-  const processAudioChunk = useCallback(async (audioBlob: Blob) => {
-    console.log('🎤 Processing audio chunk:', audioBlob.size, 'bytes, type:', audioBlob.type);
+  const processAudioChunk = useCallback(
+    async (audioBlob: Blob) => {
+      // console.log('🎤 Processing audio chunk:', audioBlob.size, 'bytes, type:', audioBlob.type);
 
-    // Визначаємо розширення файлу
-    let fileExtension = 'wav';
-    if (audioBlob.type.includes('webm')) {
-      fileExtension = 'webm';
-    } else if (audioBlob.type.includes('ogg')) {
-      fileExtension = 'ogg';
-    }
-
-    const formData = new FormData();
-    formData.append('audio', audioBlob, `recording.${fileExtension}`);
-    formData.append('previous_text', pendingTextRef.current);
-
-    try {
-      console.log('📤 Sending to STT server...');
-      const response = await fetch('http://127.0.0.1:8000/api/stt/smart', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (response.ok) {
-        const data: SmartSTTResponse = await response.json();
-        console.log('🎤 Smart STT Response:', data);
-
-        handleSTTResponse(data);
-      } else {
-        const errorText = await response.text();
-        console.error('❌ STT server error:', response.status, response.statusText, errorText);
-        setSttStatus('❌ Помилка STT');
+      // Визначаємо розширення файлу
+      let fileExtension = 'wav';
+      if (audioBlob.type.includes('webm')) {
+        fileExtension = 'webm';
+      } else if (audioBlob.type.includes('ogg')) {
+        fileExtension = 'ogg';
       }
-    } catch (error) {
-      console.error('❌ Smart STT error:', error);
-      setSttStatus('❌ Помилка з\'єднання');
-    }
-  }, [handleSTTResponse]);
+
+      const formData = new FormData();
+      formData.append('audio', audioBlob, `recording.${fileExtension}`);
+      formData.append('previous_text', pendingTextRef.current);
+
+      try {
+        // console.log('📤 Sending to STT server...');
+        const response = await fetch('http://127.0.0.1:8000/api/stt/smart', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (response.ok) {
+          const data: SmartSTTResponse = await response.json();
+          // console.log('🎤 Smart STT Response:', data);
+
+          handleSTTResponse(data);
+        } else {
+          const errorText = await response.text();
+          console.error('❌ STT server error:', response.status, response.statusText, errorText);
+          setSttStatus('❌ Помилка STT');
+        }
+      } catch (error) {
+        console.error('❌ Smart STT error:', error);
+        setSttStatus("❌ Помилка з'єднання");
+      }
+    },
+    [handleSTTResponse]
+  );
 
   // Початок запису
   const startListening = async () => {
     try {
-      console.log('🎙️ Starting to listen...');
+      // console.log('🎙️ Starting to listen...');
 
       // Якщо TTS вимкнено, автоматично вмикаємо
       if (!isVoiceEnabled && onToggleVoice) {
-        console.log('🔊 Enabling voice...');
+        // console.log('🔊 Enabling voice...');
         onToggleVoice();
       }
 
       // Отримуємо stream
       let stream = streamRef.current;
       if (!stream || !stream.active) {
-        console.log('🎤 Requesting microphone access...');
+        // console.log('🎤 Requesting microphone access...');
         stream = await navigator.mediaDevices.getUserMedia({
           audio: {
             echoCancellation: true,
             noiseSuppression: false,
             autoGainControl: true, // Вмикаємо автоматичну регулювання гучності
-            sampleRate: 48000
-          }
+            sampleRate: 48000,
+          },
         });
         streamRef.current = stream;
-        console.log('✅ Microphone access granted, stream active:', stream.active);
+        // console.log('✅ Microphone access granted, stream active:', stream.active);
 
         // Перевіряємо гучність
         const audioContext = new AudioContext();
@@ -251,18 +257,17 @@ const CommandLine: React.FC<CommandLineProps> = ({
         // Зберігаємо для очищення
         window.volumeChecker = volumeChecker;
       } else {
-        console.log('♻️ Reusing existing stream');
+        // console.log('♻️ Reusing existing stream');
       }
 
       // КРИТИЧНО: оновлюємо ref СИНХРОННО перед викликом startRecordingCycle
       isListeningRef.current = true;
       setIsListening(true);
       setSttStatus('🎙️ Слухаю...');
-      console.log('🎙️ Started listening, isListeningRef:', isListeningRef.current);
+      // console.log('🎙️ Started listening, isListeningRef:', isListeningRef.current);
 
       // Запускаємо циклічний запис (2 секунди на чанк)
       startRecordingCycle();
-
     } catch (error) {
       console.error('❌ Microphone access error:', error);
       // При помилці скидаємо стан
@@ -275,7 +280,12 @@ const CommandLine: React.FC<CommandLineProps> = ({
 
   // Циклічний запис
   const startRecordingCycle = () => {
-    console.log('🔄 Starting recording cycle, isListening:', isListeningRef.current, 'stream active:', streamRef.current?.active);
+    // console.log(
+    //   '🔄 Starting recording cycle, isListening:',
+    //   isListeningRef.current,
+    //   'stream active:',
+    //   streamRef.current?.active
+    // );
     if (!streamRef.current?.active || !isListeningRef.current) return;
 
     // Примусово використовуємо WAV формат
@@ -286,29 +296,34 @@ const CommandLine: React.FC<CommandLineProps> = ({
       mimeType = 'audio/wav';
     }
 
-    console.log('🎤 Using MIME type:', mimeType);
+    // console.log('🎤 Using MIME type:', mimeType);
     const mediaRecorder = new MediaRecorder(streamRef.current, { mimeType });
     mediaRecorderRef.current = mediaRecorder;
     audioChunksRef.current = [];
     maxVolumeRef.current = 0; // Скидаємо перед новим чанком
 
     mediaRecorder.ondataavailable = (event) => {
-      console.log('📊 Audio data available:', event.data.size, 'bytes');
+      // console.log('📊 Audio data available:', event.data.size, 'bytes');
       if (event.data.size > 0) {
         audioChunksRef.current.push(event.data);
       }
     };
 
     mediaRecorder.onstop = async () => {
-      console.log('🛑 MediaRecorder stopped, chunks:', audioChunksRef.current.length, 'max volume:', maxVolumeRef.current);
+      // console.log(
+      //   '🛑 MediaRecorder stopped, chunks:',
+      //   audioChunksRef.current.length,
+      //   'max volume:',
+      //   maxVolumeRef.current
+      // );
 
       // Простий VAD: якщо було дуже тихо (тиша/шум), не відправляємо
       if (maxVolumeRef.current < 12) {
-        console.log('🔇 Chunk too quiet, skipping STT');
+        // console.log('🔇 Chunk too quiet, skipping STT');
         setSttStatus('🔇 Тиша...');
       } else if (audioChunksRef.current.length > 0) {
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-        console.log('🎤 Created audio blob:', mimeType, audioBlob.size, 'bytes');
+        // console.log('🎤 Created audio blob:', mimeType, audioBlob.size, 'bytes');
         await processAudioChunk(audioBlob);
       } else {
         console.log('⚠️ No audio chunks recorded');
@@ -316,17 +331,17 @@ const CommandLine: React.FC<CommandLineProps> = ({
 
       // Продовжуємо цикл якщо ще слухаємо
       if (isListeningRef.current && streamRef.current?.active) {
-        console.log('🔄 Continuing recording cycle...');
+        // console.log('🔄 Continuing recording cycle...');
         startRecordingCycle();
       }
     };
 
-    console.log('▶️ Starting MediaRecorder...');
+    // console.log('▶️ Starting MediaRecorder...');
     mediaRecorder.start();
 
     // Зупиняємо запис через 3 секунди для обробки (краще для Whisper ніж 2с)
     recordingIntervalRef.current = setTimeout(() => {
-      console.log('⏱️ Stopping MediaRecorder after 3 seconds...');
+      // console.log('⏱️ Stopping MediaRecorder after 3 seconds...');
       if (mediaRecorder.state === 'recording') {
         mediaRecorder.stop();
       }
@@ -335,7 +350,7 @@ const CommandLine: React.FC<CommandLineProps> = ({
 
   // Зупинка прослуховування
   const stopListening = () => {
-    console.log('🛑 Stopping listening');
+    // console.log('🛑 Stopping listening');
 
     // КРИТИЧНО: оновлюємо ref СИНХРОННО
     isListeningRef.current = false;
@@ -364,7 +379,7 @@ const CommandLine: React.FC<CommandLineProps> = ({
 
     // Зупиняємо stream
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
   };
@@ -375,7 +390,9 @@ const CommandLine: React.FC<CommandLineProps> = ({
       switch (error.name) {
         case 'NotFoundError':
         case 'DevicesNotFoundError':
-          alert('❌ Мікрофон не знайдено\n\nПеревірте:\n• Мікрофон підключений\n• Мікрофон увімкнений в системі');
+          alert(
+            '❌ Мікрофон не знайдено\n\nПеревірте:\n• Мікрофон підключений\n• Мікрофон увімкнений в системі'
+          );
           break;
         case 'NotAllowedError':
         case 'PermissionDeniedError':
@@ -399,8 +416,6 @@ const CommandLine: React.FC<CommandLineProps> = ({
     }
   };
 
-
-
   return (
     <div className="command-line-container font-mono">
       <div className="flex items-baseline gap-2 pt-2 bg-transparent pb-0">
@@ -412,7 +427,16 @@ const CommandLine: React.FC<CommandLineProps> = ({
             className={`control-btn ${isVoiceEnabled ? 'active' : ''} !bg-transparent !border-none !shadow-none !p-0 !h-auto mb-[-2px]`}
             title="Toggle Voice (TTS)"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
               {isVoiceEnabled ? (
                 <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
@@ -450,14 +474,22 @@ const CommandLine: React.FC<CommandLineProps> = ({
 
         {/* Right Controls - Send and Mic */}
         <div className="flex items-center gap-1">
-
           {/* STT/Mic Button */}
           <button
             onClick={toggleListening}
             className={`control-btn ${isListening ? 'listening' : ''} !bg-transparent !border-none !shadow-none !p-0 !h-auto mb-[-2px]`}
             title="Toggle Smart Mic (STT)"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
               <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
               <line x1="12" y1="19" x2="12" y2="23"></line>
@@ -473,7 +505,16 @@ const CommandLine: React.FC<CommandLineProps> = ({
             className={`send-btn ${input.trim() ? 'active' : ''} !bg-transparent !border-none !shadow-none !p-0 !h-auto mb-[-2px]`}
             title="Send Command (Enter)"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <line x1="22" y1="2" x2="11" y2="13"></line>
               <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
             </svg>

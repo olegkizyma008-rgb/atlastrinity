@@ -30,7 +30,13 @@ const AGENT_INFO: Record<AgentName, { ukrainianName: string; color: string }> = 
   USER: { ukrainianName: 'Користувач', color: '#FFFFFF' },
 };
 
-const AgentStatus: React.FC<AgentStatusProps> = ({ activeAgent, systemState, currentTask, activeMode, metrics }) => {
+const AgentStatus: React.FC<AgentStatusProps> = ({
+  activeAgent,
+  systemState,
+  currentTask,
+  activeMode,
+  metrics,
+}) => {
   const agent = AGENT_INFO[activeAgent];
 
   const formatTask = (task: string) => {
@@ -50,12 +56,13 @@ const AgentStatus: React.FC<AgentStatusProps> = ({ activeAgent, systemState, cur
           when numerical values change.
       */}
       <div className="flex items-center h-full">
-
         {/* PHASE SLOT (Total width: 110px) */}
         <div className="flex items-center px-3 h-full gap-2 overflow-hidden">
           <span className="opacity-20 font-light text-[7px] w-[35px] shrink-0">PHASE</span>
           <div className="w-[65px] flex-none">
-            <span className={`${systemState === 'ERROR' ? 'text-red-500 animate-pulse' : 'text-blue-400'} font-bold block truncate`}>
+            <span
+              className={`${systemState === 'ERROR' ? 'text-red-500 animate-pulse' : 'text-blue-400'} font-bold block truncate`}
+            >
               {systemState}
             </span>
           </div>
@@ -84,7 +91,9 @@ const AgentStatus: React.FC<AgentStatusProps> = ({ activeAgent, systemState, cur
         <div className="flex items-center px-3 h-full gap-2 border-l border-white/5 overflow-hidden">
           <span className="opacity-20 font-light text-[7px] w-[22px] shrink-0">MEM</span>
           <div className="w-[48px] flex-none text-right">
-            <span className="text-white/90 font-medium tabular-nums">{metrics?.memory || '0.0GB'}</span>
+            <span className="text-white/90 font-medium tabular-nums">
+              {metrics?.memory || '0.0GB'}
+            </span>
           </div>
         </div>
 
@@ -94,16 +103,24 @@ const AgentStatus: React.FC<AgentStatusProps> = ({ activeAgent, systemState, cur
 
           {/* UP SLOT */}
           <div className="flex items-center gap-0.5 w-[50px] justify-end flex-none">
-            <span className="text-blue-400 font-bold tabular-nums">{metrics?.net_up_val || '0.0'}</span>
-            <span className="opacity-20 text-[6.5px] font-light w-[15px]">{metrics?.net_up_unit?.[0] || 'K'}U</span>
+            <span className="text-blue-400 font-bold tabular-nums">
+              {metrics?.net_up_val || '0.0'}
+            </span>
+            <span className="opacity-20 text-[6.5px] font-light w-[15px]">
+              {metrics?.net_up_unit?.[0] || 'K'}U
+            </span>
           </div>
 
           <div className="w-[1px] h-2 bg-white/5 shrink-0" />
 
           {/* DOWN SLOT */}
           <div className="flex items-center gap-0.5 w-[50px] justify-end flex-none">
-            <span className="text-blue-400 font-bold tabular-nums">{metrics?.net_down_val || '0.0'}</span>
-            <span className="opacity-20 text-[6.5px] font-light w-[15px]">{metrics?.net_down_unit?.[0] || 'K'}D</span>
+            <span className="text-blue-400 font-bold tabular-nums">
+              {metrics?.net_down_val || '0.0'}
+            </span>
+            <span className="opacity-20 text-[6.5px] font-light w-[15px]">
+              {metrics?.net_down_unit?.[0] || 'K'}D
+            </span>
           </div>
         </div>
 
@@ -129,7 +146,9 @@ const AgentStatus: React.FC<AgentStatusProps> = ({ activeAgent, systemState, cur
 
       {/* Right side: Task Stream (Floating) */}
       <div className="w-[25%] min-w-[150px] flex items-center gap-3 overflow-hidden h-full border-l border-white/5 pl-4 flex-none">
-        <span className="opacity-10 text-[7px] tracking-[0.1em] shrink-0 font-light italic">STREAM</span>
+        <span className="opacity-10 text-[7px] tracking-[0.1em] shrink-0 font-light italic">
+          STREAM
+        </span>
         <div className="flex-1 overflow-hidden relative h-full flex items-center">
           <div className="marquee-wrapper w-full">
             <div className="marquee-content text-white/[0.04] font-light tracking-normal normal-case italic py-1">
