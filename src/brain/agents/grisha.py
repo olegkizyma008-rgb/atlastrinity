@@ -136,10 +136,16 @@ class Grisha:
         prompt = AgentPrompts.grisha_strategy_prompt(
             step_action, expected_result, context, overall_goal=overall_goal
         )
+
+        # Decide which verification stack to prefer based on environment and step
+        decision = self._decide_verification_stack(step_action, expected_result, context)
+        system_msg = (
+            "You are a Verification Strategist. Consider the environment and choose the best verification stack.\n"
+            f"ENVIRONMENT_DECISION: prefer_vision_first={decision['prefer_vision_first']}; use_mcp={decision['use_mcp']}; preferred_servers={decision['preferred_servers']}; rationale={decision['rationale']}\n"
+            "When visual evidence is conclusive, prioritize Vision verification. When authoritative system/data checks are needed, prefer MCP servers (favor local Swift-based MCP servers when available). Output internal strategies in English."
+        )
         messages = [
-            SystemMessage(
-                content="You are a Vision-First Logic Engine. Output internal strategies in English."
-            ),
+            SystemMessage(content=system_msg),
             HumanMessage(content=prompt),
         ]
 
@@ -160,6 +166,85 @@ class Grisha:
             if blocked in action_desc:
                 return True
         return False
+
+    def _decide_verification_stack(self, step_action: str, expected_result: str, context: dict) -> dict:
+        """
+        Decide whether to prefer Vision or MCP tools based on:
+        - whether the step is visual (ui/screenshot/window)
+        - whether the step needs authoritative system/data checks (files, install, permissions)
+        - availability of powerful Vision model
+        - presence of local Swift-based MCP servers (prefer for low-latency authoritative checks)
+
+        Returns a dict: {prefer_vision_first, use_mcp, preferred_servers, rationale}
+        """
+        visual_keywords = ("visual", "screenshot", "ui", "interface", "window", "dialog", "button", "icon")
+        system_keywords = (
+            "file",
+            "install",
+            "chmod",
+            "chown",
+            "git",
+            "permission",
+            "plist",
+            "service",
+            "daemon",
+            "launchctl",
+            "package",
+            "brew",
+            "pip",
+            "npm",
+            "run",
+            "execute",
+            "terminal",
+        )
+
+        visual_needed = any(
+            kw in expected_result.lower() or kw in step_action.lower()
+            for kw in visual_keywords
+        )
+        system_needed = any(
+            kw in expected_result.lower() or kw in step_action.lower()
+            for kw in system_keywords
+        )
+
+        try:
+            from ..mcp_manager import mcp_manager
+
+            servers_cfg = getattr(mcp_manager, "config", {}).get("mcpServers", {})
+            servers = list(servers_cfg.keys())
+            swift_servers = []
+            for s, cfg in servers_cfg.items():
+                if "swift" in s.lower() or "macos" in s.lower() or "mcp-server-macos-use" in s.lower():
+                    swift_servers.append(s)
+                else:
+                    cmd = (cfg or {}).get("command", "") or ""
+                    if isinstance(cmd, str) and "swift" in cmd.lower():
+                        swift_servers.append(s)
+        except Exception:
+            servers = []
+            swift_servers = []
+
+        vision_model_name = (getattr(self.llm, "model_name", "") or "").lower()
+        vision_powerful = any(x in vision_model_name for x in ("gpt-4o", "vision"))
+
+        # Heuristic decision rules
+        prefer_vision_first = bool(visual_needed or (vision_powerful and not system_needed))
+        use_mcp = bool(system_needed or swift_servers)
+
+        preferred_servers = []
+        if use_mcp:
+            preferred_servers = swift_servers if swift_servers else servers
+
+        rationale = (
+            f"visual_needed={visual_needed}, system_needed={system_needed}, "
+            f"vision_powerful={vision_powerful}, swift_servers={swift_servers}"
+        )
+        return {
+            "prefer_vision_first": prefer_vision_first,
+            "use_mcp": use_mcp,
+            "preferred_servers": preferred_servers,
+            "rationale": rationale,
+        }
 
     @retry(
         wait=wait_exponential(multiplier=0.5, min=1, max=10),
