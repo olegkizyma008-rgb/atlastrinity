@@ -5,8 +5,8 @@ import sys
 # Add src to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.brain.logger import logger
-from src.brain.orchestrator import Trinity
+from src.brain.logger import logger  # noqa: E402
+from src.brain.orchestrator import Trinity  # noqa: E402
 
 
 async def run_verification():

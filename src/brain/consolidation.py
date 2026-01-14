@@ -28,9 +28,7 @@ class ConsolidationModule:
     def __init__(self):
         self.last_consolidation: Optional[datetime] = None
         self.idle_threshold = timedelta(hours=2)
-        self.log_path = os.path.join(
-            os.path.expanduser("~/.config/atlastrinity/logs"), "brain.log"
-        )
+        self.log_path = os.path.join(os.path.expanduser("~/.config/atlastrinity/logs"), "brain.log")
 
     async def run_consolidation(self, llm=None) -> Dict[str, Any]:
         """
@@ -113,9 +111,7 @@ class ConsolidationModule:
             for task in tasks:
                 # Load steps
                 step_stmt = (
-                    select(DBStep)
-                    .where(DBStep.task_id == task.id)
-                    .order_by(DBStep.sequence_number)
+                    select(DBStep).where(DBStep.task_id == task.id).order_by(DBStep.sequence_number)
                 )
                 step_res = await session.execute(step_stmt)
                 steps = step_res.scalars().all()
@@ -146,13 +142,10 @@ class ConsolidationModule:
         from langchain_core.messages import HumanMessage, SystemMessage
 
         history = "\n".join(
-            [
-                f"- {s['action']}: {s['status']} (Error: {s['error']})"
-                for s in task_data["steps"]
-            ]
+            [f"- {s['action']}: {s['status']} (Error: {s['error']})" for s in task_data["steps"]]
         )
 
-        prompt = f"""Analyze this failed task and extract a general 'Lesson' to prevent this in the future.
+        prompt = """Analyze this failed task and extract a general 'Lesson' to prevent this in the future.
 
         TASK: {task_data['goal']}
         EXECUTION:
@@ -173,9 +166,7 @@ class ConsolidationModule:
                     HumanMessage(content=prompt),
                 ]
             )
-            content = (
-                response.content if hasattr(response, "content") else str(response)
-            )
+            content = response.content if hasattr(response, "content") else str(response)
             # Basic JSON extraction
             start = content.find("{")
             end = content.rfind("}") + 1

@@ -119,8 +119,8 @@ sys.modules.setdefault("src.brain.mcp_manager", brain_mcp_manager_mod)
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
-from src.brain.agents.tetyana import StepResult
-from src.brain.orchestrator import Trinity
+from src.brain.agents.tetyana import StepResult  # noqa: E402
+from src.brain.orchestrator import Trinity  # noqa: E402
 
 
 class DummyVoice:
@@ -159,7 +159,7 @@ def _plan(steps):
 
 @pytest.fixture
 def fast_sleep(monkeypatch):
-    import src.brain.orchestrator as orch
+    import src.brain.orchestrator as orch  # noqa: E402
 
     async def _no_sleep(_):
         return None
@@ -169,7 +169,7 @@ def fast_sleep(monkeypatch):
 
 @pytest.fixture
 def isolated_globals(monkeypatch):
-    import src.brain.orchestrator as orch
+    import src.brain.orchestrator as orch  # noqa: E402
 
     # Avoid Redis / memory / consolidation side-effects during unit tests
     monkeypatch.setattr(orch.state_manager, "available", False, raising=False)
@@ -181,7 +181,7 @@ def isolated_globals(monkeypatch):
 
 @pytest.fixture
 def stub_notifications(monkeypatch):
-    import src.brain.orchestrator as orch
+    import src.brain.orchestrator as orch  # noqa: E402
 
     stub = StubNotifications()
     monkeypatch.setattr(orch, "notifications", stub, raising=True)
@@ -270,9 +270,7 @@ def test_simple_execution_appends_step_result(trinity_base):
 
     class MockTetyana:
         async def execute_step(self, step, attempt: int = 1):
-            return StepResult(
-                step_id=step.get("id"), success=True, result="OK", error=None
-            )
+            return StepResult(step_id=step.get("id"), success=True, result="OK", error=None)
 
         def get_voice_message(self, *args, **kwargs):
             return ""
@@ -313,9 +311,7 @@ def test_verification_rejection_marks_step_failed(trinity_base):
 
     class MockTetyana:
         async def execute_step(self, step, attempt: int = 1):
-            return StepResult(
-                step_id=step.get("id"), success=True, result="OK", error=None
-            )
+            return StepResult(step_id=step.get("id"), success=True, result="OK", error=None)
 
         def get_voice_message(self, *args, **kwargs):
             return ""
@@ -369,9 +365,7 @@ def test_verification_crash_is_caught_and_logged(trinity_base):
 
     class MockTetyana:
         async def execute_step(self, step, attempt: int = 1):
-            return StepResult(
-                step_id=step.get("id"), success=True, result="OK", error=None
-            )
+            return StepResult(step_id=step.get("id"), success=True, result="OK", error=None)
 
         def get_voice_message(self, *args, **kwargs):
             return ""
@@ -391,9 +385,7 @@ def test_verification_crash_is_caught_and_logged(trinity_base):
     assert res["status"] == "failed"
     step_results = res["result"]
     assert isinstance(step_results, list)
-    assert any(
-        "Verification system error" in (r.get("error") or "") for r in step_results
-    )
+    assert any("Verification system error" in (r.get("error") or "") for r in step_results)
 
     logs = trinity_base.state.get("logs", [])
     assert any("Verification crashed" in str(l.get("message")) for l in logs)
@@ -474,9 +466,7 @@ def test_subtask_step_triggers_recursive_run(trinity_base):
 
     class MockTetyana:
         async def execute_step(self, step, attempt: int = 1):
-            return StepResult(
-                step_id=step.get("id"), success=True, result="OK", error=None
-            )
+            return StepResult(step_id=step.get("id"), success=True, result="OK", error=None)
 
         def get_voice_message(self, *args, **kwargs):
             return ""

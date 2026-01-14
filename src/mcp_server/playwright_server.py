@@ -54,9 +54,7 @@ async def playwright_screenshot() -> str:
     # In a one-shot model, this is tricky as the page is gone.
     # We will just return a message saying it needs persistent connection
     # OR we implement a combined tool if needed.
-    return (
-        "Screenshot tool requires a persistent session (not yet supported in one-shot)."
-    )
+    return "Screenshot tool requires a persistent session (not yet supported in one-shot)."
 
 
 @server.tool()

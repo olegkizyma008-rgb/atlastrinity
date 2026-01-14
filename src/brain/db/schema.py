@@ -7,8 +7,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import (JSON, Boolean, DateTime, ForeignKey, Integer, String,
-                        Text)
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -20,9 +19,7 @@ class Base(DeclarativeBase):
 class Session(Base):
     __tablename__ = "sessions"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     metadata_blob: Mapped[Dict[str, Any]] = mapped_column(JSONB, default={})
@@ -35,9 +32,7 @@ class Session(Base):
 class Task(Base):
     __tablename__ = "tasks"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sessions.id"))
 
     goal: Mapped[str] = mapped_column(Text)
@@ -58,9 +53,7 @@ class Task(Base):
 class TaskStep(Base):
     __tablename__ = "task_steps"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     task_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tasks.id"))
 
     sequence_number: Mapped[int] = mapped_column(Integer)
@@ -80,9 +73,7 @@ class TaskStep(Base):
 class ToolExecution(Base):
     __tablename__ = "tool_executions"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     step_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("task_steps.id"))
 
     server_name: Mapped[str] = mapped_column(String(100))
@@ -103,18 +94,14 @@ class LogEntry(Base):
     level: Mapped[str] = mapped_column(String(20))
     source: Mapped[str] = mapped_column(String(50))
     message: Mapped[str] = mapped_column(Text)
-    metadata_blob: Mapped[Optional[Dict[str, Any]]] = mapped_column(
-        JSONB, nullable=True
-    )
+    metadata_blob: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
 
 
 # Knowledge Graph Nodes (Vertices)
 class KGNode(Base):
     __tablename__ = "kg_nodes"
 
-    id: Mapped[str] = mapped_column(
-        Text, primary_key=True
-    )  # URI: file://..., task:uuid
+    id: Mapped[str] = mapped_column(Text, primary_key=True)  # URI: file://..., task:uuid
     type: Mapped[str] = mapped_column(String(50))  # FILE, TASK, TOOL, CONCEPT
     attributes: Mapped[Dict[str, Any]] = mapped_column(JSONB, default={})
 

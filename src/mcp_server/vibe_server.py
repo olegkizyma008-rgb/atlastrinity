@@ -13,6 +13,7 @@ Key Features:
 Author: AtlasTrinity Team
 Updated: 2026-01-14
 """
+
 from __future__ import annotations
 
 import json
@@ -167,10 +168,10 @@ def _run_vibe_programmatic(
 ) -> Dict[str, Any]:
     """
     Execute Vibe in programmatic mode with -p flag.
-    
+
     This is the PRIMARY method for interacting with Vibe from MCP.
     Uses CLI mode, NOT interactive TUI, so all output goes to logs.
-    
+
     Args:
         prompt: The prompt/query to send to Vibe
         cwd: Working directory for execution
@@ -186,43 +187,43 @@ def _run_vibe_programmatic(
 
     # Build command with programmatic flags
     argv: List[str] = [vibe_path, "-p", prompt]
-    
+
     # Output format for structured responses
     argv.extend(["--output", output_format])
-    
+
     # Auto-approve for automation
     if auto_approve:
         argv.append("--auto-approve")
-    
+
     # Max turns limit
     if max_turns:
         argv.extend(["--max-turns", str(max_turns)])
-    
+
     # Specific tools
     if enabled_tools:
         for tool in enabled_tools:
             argv.extend(["--enabled-tools", tool])
 
     logger.info(f"[VIBE PROGRAMMATIC] Prompt: {prompt[:100]}...")
-    
+
     result = _run_vibe(
         argv=argv,
         cwd=cwd,
         timeout_s=timeout_s,
         extra_env=None,
     )
-    
+
     # Parse JSON output if requested
     if output_format == "json" and result.get("success") and result.get("stdout"):
         try:
             parsed = json.loads(result["stdout"])
             result["parsed_response"] = parsed
-            logger.info(f"[VIBE] Parsed JSON response successfully")
+            logger.info("[VIBE] Parsed JSON response successfully")
         except json.JSONDecodeError:
             # If not valid JSON, keep raw stdout
             logger.warning("[VIBE] Output was not valid JSON, keeping raw text")
             result["parsed_response"] = None
-    
+
     return result
 
 
@@ -230,26 +231,23 @@ def _run_vibe_programmatic(
 def vibe_which() -> Dict[str, Any]:
     """
     Locate the Vibe CLI binary path and version.
-    
+
     Returns:
         Dict with 'binary' path and 'version' if successful.
     """
     vibe_path = _resolve_vibe_binary()
     if not vibe_path:
         return {"error": f"Vibe CLI not found on PATH (binary='{VIBE_BINARY}')"}
-    
+
     # Get version
     try:
         result = subprocess.run(
-            [vibe_path, "--version"],
-            capture_output=True,
-            text=True,
-            timeout=5.0
+            [vibe_path, "--version"], capture_output=True, text=True, timeout=5.0
         )
         version = result.stdout.strip() if result.returncode == 0 else "unknown"
     except Exception:
         version = "unknown"
-    
+
     return {"success": True, "binary": vibe_path, "version": version}
 
 
@@ -264,10 +262,10 @@ def vibe_prompt(
 ) -> Dict[str, Any]:
     """
     Send a prompt to Vibe AI agent in PROGRAMMATIC mode (CLI, not TUI).
-    
+
     This is the PRIMARY tool for interacting with Vibe.
     All output is logged and visible in the Electron app.
-    
+
     Args:
         prompt: The message/query for Vibe AI (Mistral-powered)
         cwd: Working directory for execution
@@ -275,10 +273,10 @@ def vibe_prompt(
         output_format: Response format - 'text', 'json', or 'streaming' (default 'json')
         auto_approve: Auto-approve tool calls without confirmation (default True)
         max_turns: Maximum conversation turns (default 10)
-    
+
     Returns:
         Dict with 'success', 'stdout', 'parsed_response' (if JSON), 'stderr'
-    
+
     Example:
         vibe_prompt(
             prompt="Analyze the error in main.py line 45 and fix it",
@@ -287,9 +285,9 @@ def vibe_prompt(
         )
     """
     eff_timeout = timeout_s if timeout_s is not None else DEFAULT_TIMEOUT_S
-    
+
     logger.info(f"[VIBE] Processing prompt: {prompt[:100]}...")
-    
+
     return _run_vibe_programmatic(
         prompt=prompt,
         cwd=cwd,
@@ -311,10 +309,10 @@ def vibe_analyze_error(
 ) -> Dict[str, Any]:
     """
     Deep error analysis and optional auto-fix using Vibe AI.
-    
+
     This tool is designed for self-healing scenarios when Tetyana
     or Grisha encounter errors they cannot resolve.
-    
+
     Args:
         error_message: The error message or stack trace to analyze
         log_context: Recent log entries for context
@@ -322,7 +320,7 @@ def vibe_analyze_error(
         cwd: Working directory
         timeout_s: Timeout (default 300s for deep analysis)
         auto_fix: Whether to automatically fix the issue (default True)
-    
+
     Returns:
         Analysis results with suggested or applied fixes
     """
@@ -332,38 +330,42 @@ def vibe_analyze_error(
         "",
         f"ERROR MESSAGE:\n{error_message}",
     ]
-    
+
     if log_context:
         prompt_parts.append(f"\nRECENT LOGS:\n{log_context}")
-    
+
     if file_path:
         prompt_parts.append(f"\nFILE PATH: {file_path}")
-    
+
     if auto_fix:
-        prompt_parts.extend([
-            "",
-            "INSTRUCTIONS:",
-            "1. Analyze the error thoroughly",
-            "2. Identify the root cause",
-            "3. ACTIVELY FIX the issue by editing files or running commands",
-            "4. Verify the fix works",
-            "5. Provide a summary of what was fixed",
-        ])
+        prompt_parts.extend(
+            [
+                "",
+                "INSTRUCTIONS:",
+                "1. Analyze the error thoroughly",
+                "2. Identify the root cause",
+                "3. ACTIVELY FIX the issue by editing files or running commands",
+                "4. Verify the fix works",
+                "5. Provide a summary of what was fixed",
+            ]
+        )
     else:
-        prompt_parts.extend([
-            "",
-            "INSTRUCTIONS:",
-            "1. Analyze the error thoroughly",
-            "2. Identify the root cause",
-            "3. Suggest specific fixes (without applying them)",
-            "4. Explain why each fix would work",
-        ])
-    
+        prompt_parts.extend(
+            [
+                "",
+                "INSTRUCTIONS:",
+                "1. Analyze the error thoroughly",
+                "2. Identify the root cause",
+                "3. Suggest specific fixes (without applying them)",
+                "4. Explain why each fix would work",
+            ]
+        )
+
     prompt = "\n".join(prompt_parts)
     eff_timeout = timeout_s if timeout_s is not None else 300.0
-    
+
     logger.info(f"[VIBE] Starting error analysis (auto_fix={auto_fix})")
-    
+
     return _run_vibe_programmatic(
         prompt=prompt,
         cwd=cwd,
@@ -383,13 +385,13 @@ def vibe_code_review(
 ) -> Dict[str, Any]:
     """
     Request a code review from Vibe AI for a specific file.
-    
+
     Args:
         file_path: Path to the file to review
         focus_areas: Optional specific areas to focus on (e.g., "security", "performance")
         cwd: Working directory
         timeout_s: Timeout in seconds
-    
+
     Returns:
         Code review analysis with suggestions
     """
@@ -403,15 +405,15 @@ def vibe_code_review(
         "4. Performance improvements",
         "5. Code style and best practices",
     ]
-    
+
     if focus_areas:
         prompt_parts.append(f"\nFOCUS AREAS: {focus_areas}")
-    
+
     prompt = "\n".join(prompt_parts)
     eff_timeout = timeout_s if timeout_s is not None else 120.0
-    
+
     logger.info(f"[VIBE] Starting code review for: {file_path}")
-    
+
     return _run_vibe_programmatic(
         prompt=prompt,
         cwd=cwd,
@@ -431,42 +433,44 @@ def vibe_smart_plan(
 ) -> Dict[str, Any]:
     """
     Generate a smart execution plan for a complex objective.
-    
+
     Uses Vibe AI to create a structured plan with steps.
-    
+
     Args:
         objective: The goal or task to plan for
         context: Additional context (existing code, constraints, etc.)
         cwd: Working directory
         timeout_s: Timeout in seconds
-    
+
     Returns:
         Structured plan with steps
     """
     prompt_parts = [
-        f"SMART PLANNING REQUEST",
+        "SMART PLANNING REQUEST",
         "",
         f"OBJECTIVE: {objective}",
     ]
-    
+
     if context:
         prompt_parts.append(f"\nCONTEXT:\n{context}")
-    
-    prompt_parts.extend([
-        "",
-        "Create a detailed, step-by-step execution plan.",
-        "For each step, specify:",
-        "- Action to perform",
-        "- Required tools/commands",
-        "- Expected outcome",
-        "- Verification criteria",
-    ])
-    
+
+    prompt_parts.extend(
+        [
+            "",
+            "Create a detailed, step-by-step execution plan.",
+            "For each step, specify:",
+            "- Action to perform",
+            "- Required tools/commands",
+            "- Expected outcome",
+            "- Verification criteria",
+        ]
+    )
+
     prompt = "\n".join(prompt_parts)
     eff_timeout = timeout_s if timeout_s is not None else 60.0
-    
+
     logger.info(f"[VIBE] Generating smart plan for: {objective[:50]}...")
-    
+
     return _run_vibe_programmatic(
         prompt=prompt,
         cwd=cwd,
@@ -487,22 +491,22 @@ def vibe_execute_subcommand(
 ) -> Dict[str, Any]:
     """
     Execute a specific Vibe CLI subcommand (for non-AI operations).
-    
+
     This is for utility commands like list-editors, run cleanup, etc.
     For AI interactions, use vibe_prompt instead.
-    
+
     Args:
         subcommand: The vibe subcommand (e.g., 'list-editors', 'run')
         args: Optional arguments for the subcommand
         cwd: Working directory
         timeout_s: Timeout in seconds
         env: Additional environment variables
-    
+
     Allowed subcommands:
         list-editors, list-modules, run, enable, disable, install,
         agent-reset, agent-on, agent-off, vibe-status, vibe-continue,
         vibe-cancel, vibe-help, eternal-engine, screenshots
-    
+
     Blocked (use vibe_prompt instead):
         tui, agent-chat, self-healing-status, self-healing-scan
     """
@@ -531,7 +535,7 @@ def vibe_execute_subcommand(
         argv.extend([str(a) for a in args])
 
     eff_timeout = timeout_s if timeout_s is not None else DEFAULT_TIMEOUT_S
-    
+
     return _run_vibe(argv=argv, cwd=cwd, timeout_s=eff_timeout, extra_env=env)
 
 
@@ -543,36 +547,36 @@ def vibe_ask(
 ) -> Dict[str, Any]:
     """
     Ask Vibe AI a quick question (read-only, no tool execution).
-    
+
     Similar to vibe_prompt but with --plan flag for read-only mode.
-    
+
     Args:
         question: The question to ask
         cwd: Working directory
         timeout_s: Timeout in seconds
-    
+
     Returns:
         AI response without any file modifications
     """
     vibe_path = _resolve_vibe_binary()
     if not vibe_path:
         return {"error": f"Vibe CLI not found on PATH (binary='{VIBE_BINARY}')"}
-    
+
     argv = [vibe_path, "-p", question, "--output", "json", "--plan"]
-    
+
     eff_timeout = timeout_s if timeout_s is not None else 120.0  # 2 minutes for warmup
-    
+
     logger.info(f"[VIBE] Asking question: {question[:50]}...")
-    
+
     result = _run_vibe(argv=argv, cwd=cwd, timeout_s=eff_timeout, extra_env=None)
-    
+
     # Parse JSON if possible
     if result.get("success") and result.get("stdout"):
         try:
             result["parsed_response"] = json.loads(result["stdout"])
         except json.JSONDecodeError:
             result["parsed_response"] = None
-    
+
     return result
 
 

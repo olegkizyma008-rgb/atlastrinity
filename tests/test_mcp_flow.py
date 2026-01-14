@@ -7,13 +7,13 @@ import sys
 # We will run from root.
 sys.path.append(os.path.abspath(os.getcwd()))
 
-from src.brain.mcp_manager import mcp_manager
+from src.brain.mcp_manager import mcp_manager  # noqa: E402
 
 
 async def test_flow():
     print("--- 1. Testing Initialization ---")
     # Initialize basic logging
-    import logging
+    import logging  # noqa: E402
 
     logging.basicConfig(level=logging.INFO)
 
@@ -31,7 +31,7 @@ async def test_flow():
             print("❌ FAILURE: Tool names NOT found in catalog.")
     except Exception as e:
         print(f"❌ CRITICAL FAILURE during catalog generation: {e}")
-        import traceback
+        import traceback  # noqa: E402
 
         traceback.print_exc()
 
@@ -43,9 +43,7 @@ async def test_flow():
 
         # Check if filesystem server is active in catalog
         if "filesystem" in catalog:
-            result = await mcp_manager.call_tool(
-                "filesystem", "list_directory", {"path": cwd}
-            )
+            result = await mcp_manager.call_tool("filesystem", "list_directory", {"path": cwd})
             print(f"Execution Result: {result}")
 
             # The result from mcp python sdk is an object, usually CallToolResult
@@ -58,7 +56,7 @@ async def test_flow():
 
     except Exception as e:
         print(f"❌ FAILURE: Execution failed: {e}")
-        import traceback
+        import traceback  # noqa: E402
 
         traceback.print_exc()
 

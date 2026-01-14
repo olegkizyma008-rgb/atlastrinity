@@ -63,9 +63,7 @@ if len(row_idx) > 20:
         )
 
     # Main thin border
-    draw.rectangle(
-        [b, b, final_w - b, final_w - b], outline=(100, 220, 255, 200), width=2
-    )
+    draw.rectangle([b, b, final_w - b, final_w - b], outline=(100, 220, 255, 200), width=2)
 
     # Smooth
     final = final.filter(ImageFilter.GaussianBlur(0.4))

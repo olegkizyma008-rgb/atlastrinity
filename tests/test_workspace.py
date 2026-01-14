@@ -10,8 +10,8 @@ WORKSPACE_DIR = CONFIG_ROOT / "workspace"
 
 # Add src to path for MCP Manager
 sys.path.append(os.path.abspath(os.getcwd()))
-from src.brain.config import ensure_dirs  # Trigger creation logic
-from src.brain.mcp_manager import mcp_manager
+from src.brain.config import ensure_dirs  # Trigger creation logic  # noqa: E402
+from src.brain.mcp_manager import mcp_manager  # noqa: E402
 
 
 async def verify_workspace():
@@ -62,11 +62,11 @@ async def verify_workspace():
             # Cleanup
             os.remove(test_file)
         else:
-            print(f"❌ FAILURE: MCP write failed or file not found.")
+            print("❌ FAILURE: MCP write failed or file not found.")
 
     except Exception as e:
         print(f"❌ FAILURE: MCP interaction error: {e}")
-        import traceback
+        import traceback  # noqa: E402
 
         traceback.print_exc()
 

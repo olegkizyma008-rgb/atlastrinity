@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.brain.mcp_manager import mcp_manager
+from src.brain.mcp_manager import mcp_manager  # noqa: E402
 
 # All servers from config
 ALL_SERVERS = [
@@ -56,7 +56,7 @@ async def run_server_test(name: str) -> dict:
 
 
 # Pytest wrapper
-import pytest
+import pytest  # noqa: E402
 
 
 @pytest.mark.asyncio
@@ -76,7 +76,7 @@ async def main():
 
     results = []
     for server in ALL_SERVERS:
-        result = await test_server(server)
+        result = await run_server_test(server)
         results.append(result)
         await asyncio.sleep(0.5)  # Small delay between tests
 

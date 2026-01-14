@@ -37,9 +37,7 @@ def _load_index() -> Dict[str, Any]:
 
 def _save_index(index: Dict[str, Any]) -> None:
     """Save notes index"""
-    _index_path().write_text(
-        json.dumps(index, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    _index_path().write_text(json.dumps(index, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 @server.tool()
@@ -66,7 +64,7 @@ def create_note(
 
     # Save note file
     note_file = _notes_dir() / f"{note_id}.md"
-    note_content = f"""# {title}
+    note_content = """# {title}
 
 **Category:** {category}
 **Tags:** {', '.join(tags) if tags else 'None'}

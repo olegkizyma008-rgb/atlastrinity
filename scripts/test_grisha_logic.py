@@ -5,8 +5,8 @@ import sys
 # Add src to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
-from brain.agents.grisha import Grisha
-from brain.mcp_manager import mcp_manager
+from brain.agents.grisha import Grisha  # noqa: E402
+from brain.mcp_manager import mcp_manager  # noqa: E402
 
 
 async def test_dynamic_screenshot():

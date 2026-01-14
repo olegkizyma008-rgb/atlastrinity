@@ -10,7 +10,7 @@ from pathlib import Path
 # Add project root to python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.brain.mcp_manager import mcp_manager
+from src.brain.mcp_manager import mcp_manager  # noqa: E402
 
 
 async def run_test_server_tools(server_name, expected_tools=None):
@@ -38,7 +38,7 @@ async def run_test_server_tools(server_name, expected_tools=None):
 
 
 # Pytest wrapper
-import pytest
+import pytest  # noqa: E402
 
 EXPECTED = {"postgres": ["query"], "github": ["get_file_contents"]}
 

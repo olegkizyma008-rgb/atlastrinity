@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.brain.config_loader import config
+from src.brain.config_loader import config  # noqa: E402
 
 # Default list of MCP servers used in tests
 DEFAULT_SERVERS = [
@@ -93,9 +93,7 @@ def test_cases(server_name):
     return test_plan.get(server_name, [])
 
 
-@pytest.fixture(
-    params=["cpu"] + (["mps"] if (torch and torch.backends.mps.is_available()) else [])
-)
+@pytest.fixture(params=["cpu"] + (["mps"] if (torch and torch.backends.mps.is_available()) else []))
 def device_name(request):
     """Parametrize device_name for Whisper tests (cpu and mps if available)."""
     return request.param

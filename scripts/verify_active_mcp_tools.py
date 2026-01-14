@@ -22,7 +22,7 @@ async def verify_active_servers():
 
     # Import mcp_manager after project root is added
     try:
-        from src.brain.mcp_manager import mcp_manager
+        from src.brain.mcp_manager import mcp_manager  # noqa: E402
     except ImportError as e:
         print(f"{RED}Error: Could not import mcp_manager. {e}{RESET}")
         return
@@ -46,9 +46,7 @@ async def verify_active_servers():
 
         try:
             # 60 second timeout per server for connection + tool listing
-            session = await asyncio.wait_for(
-                mcp_manager.get_session(server_name), timeout=60
-            )
+            session = await asyncio.wait_for(mcp_manager.get_session(server_name), timeout=60)
 
             if session:
                 print(f"{GREEN}CONNECTED{RESET}")
@@ -58,9 +56,7 @@ async def verify_active_servers():
 
                 for tool in tools:
                     name = getattr(tool, "name", "N/A")
-                    description = getattr(
-                        tool, "description", "No description available"
-                    )
+                    description = getattr(tool, "description", "No description available")
                     print(f"  • {BOLD}{name}{RESET}: {description}")
             else:
                 print(f"{RED}FAILED (No session returned){RESET}")

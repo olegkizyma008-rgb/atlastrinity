@@ -14,10 +14,9 @@ def _import_mcp_sdk():
         src_dir = str(Path(__file__).resolve().parents[1])
         sys.path = [p for p in sys.path if str(p) != src_dir]
 
-        from mcp.client.session import ClientSession as _ClientSession
-        from mcp.client.stdio import \
-            StdioServerParameters as _StdioServerParameters
-        from mcp.client.stdio import stdio_client as _stdio_client
+        from mcp.client.session import ClientSession as _ClientSession  # noqa: E402
+        from mcp.client.stdio import StdioServerParameters as _StdioServerParameters  # noqa: E402
+        from mcp.client.stdio import stdio_client as _stdio_client  # noqa: E402
 
         return _ClientSession, _StdioServerParameters, _stdio_client
     finally:
@@ -26,7 +25,7 @@ def _import_mcp_sdk():
 
 # Import preflight utilities (uses npm under the hood for registry checks)
 try:
-    from .mcp_preflight import check_package_arg_for_tool
+    from .mcp_preflight import check_package_arg_for_tool  # noqa: E402
 except Exception:
     # Fallback: if preflight not available, define a permissive stub
     def check_package_arg_for_tool(arg: str, tool_cmd: str = "npx") -> bool:  # type: ignore
@@ -68,9 +67,7 @@ class MCPManager:
         # Controls for restart concurrency and retry/backoff
         # Limit number of concurrent restarts to avoid forking storms
         self._restart_semaphore = asyncio.Semaphore(4)
-        self._max_restart_attempts = int(
-            config.get("mcp_enhanced.max_restart_attempts", 5)
-        )
+        self._max_restart_attempts = int(config.get("mcp_enhanced.max_restart_attempts", 5))
         self._restart_backoff_base = float(
             config.get("mcp_enhanced.restart_backoff_base", 0.5)
         )  # seconds
@@ -96,14 +93,12 @@ class MCPManager:
         processed = {
             "mcpServers": {
                 "_defaults": {
-                    "connect_timeout": float(
-                        config.get("mcp_enhanced.connection_timeout", 30)
-                    )
+                    "connect_timeout": float(config.get("mcp_enhanced.connection_timeout", 30))
                 }
             }
         }
 
-        import re
+        import re  # noqa: E402
 
         def _substitute_placeholders(value: Any, missing: List[str]) -> Any:
             if not isinstance(value, str):
@@ -112,7 +107,7 @@ class MCPManager:
             def replace_match(match):
                 env_name = match.group(1)
                 if env_name == "PROJECT_ROOT":
-                    from .config import PROJECT_ROOT
+                    from .config import PROJECT_ROOT  # noqa: E402
 
                     return str(PROJECT_ROOT)
 
@@ -138,7 +133,7 @@ class MCPManager:
                     parts = result.split("/")
                     if "vendor" in parts:
                         binary_name = parts[-1]
-                        from .config import PROJECT_ROOT
+                        from .config import PROJECT_ROOT  # noqa: E402
 
                         prod_path = PROJECT_ROOT / "bin" / binary_name
                         if prod_path.exists():
@@ -194,14 +189,8 @@ class MCPManager:
 
     async def get_session(self, server_name: str) -> Optional[ClientSession]:
         """Get or create a persistent session for the server"""
-        if (
-            ClientSession is None
-            or StdioServerParameters is None
-            or stdio_client is None
-        ):
-            logger.error(
-                "MCP Python package is not installed; MCP features are unavailable"
-            )
+        if ClientSession is None or StdioServerParameters is None or stdio_client is None:
+            logger.error("MCP Python package is not installed; MCP features are unavailable")
             return None
 
         async with self._lock:
@@ -224,9 +213,7 @@ class MCPManager:
     ) -> Optional[ClientSession]:
         """Establish a new connection to an MCP server"""
         default_timeout = float(
-            self.config.get("mcpServers", {})
-            .get("_defaults", {})
-            .get("connect_timeout", 30.0)
+            self.config.get("mcpServers", {}).get("_defaults", {}).get("connect_timeout", 30.0)
         )
         connect_timeout = float(config.get("connect_timeout", default_timeout))
 
@@ -234,7 +221,7 @@ class MCPManager:
         if missing_env:
             logger.error(
                 f"Missing required environment variables for MCP server '{server_name}': {missing_env}. "
-                f"Set them in ~/.config/atlastrinity/.env or your shell environment."
+                "Set them in ~/.config/atlastrinity/.env or your shell environment."
             )
             return None
         command = config.get("command")
@@ -265,9 +252,7 @@ class MCPManager:
             # === PRE-FLIGHT: verify package versions for npx/bunx invocations ===
             # If the first arg looks like 'package@version', ensure the version exists
             # in the registry before spawning the external command.
-            if len(args) > 0 and not check_package_arg_for_tool(
-                args[0], tool_cmd=command
-            ):
+            if len(args) > 0 and not check_package_arg_for_tool(args[0], tool_cmd=command):
                 logger.error(
                     f"Requested package '{args[0]}' for command '{command}' does not exist or version not available in registry. Aborting start for this MCP."
                 )
@@ -299,9 +284,7 @@ class MCPManager:
                 session = await asyncio.wait_for(fut, timeout=connect_timeout)
                 return session
             except Exception as e:
-                logger.error(
-                    f"Existing connection for {server_name} failed to initialize: {e}"
-                )
+                logger.error(f"Existing connection for {server_name} failed to initialize: {e}")
                 return None
 
         # Create per-server close event and a future that will be completed
@@ -349,9 +332,7 @@ class MCPManager:
         except Exception as e:
             # If we couldn't initialize, ask runner to exit and await it
             logger.error(f"Failed to connect to {server_name}: {type(e).__name__}: {e}")
-            logger.debug(
-                f"[MCP] Command: {command}, Args: {args}, Env keys: {list(env.keys())}"
-            )
+            logger.debug(f"[MCP] Command: {command}, Args: {args}, Env keys: {list(env.keys())}")
             try:
                 close_event.set()
                 await task
@@ -376,33 +357,30 @@ class MCPManager:
                 for item in result.content:
                     if hasattr(item, "text") and isinstance(item.text, str):
                         if len(item.text) > 50000:  # 50KB limit
-                            item.text = (
-                                item.text[:50000] + "\n... [TRUNCATED DUE TO SIZE] ..."
-                            )
-                            logger.warning(
-                                f"Truncated large output from {server_name}.{tool_name}"
-                            )
+                            item.text = item.text[:50000] + "\n... [TRUNCATED DUE TO SIZE] ..."
+                            logger.warning(f"Truncated large output from {server_name}.{tool_name}")
 
             return result
         except Exception as e:
             logger.error(f"Error calling tool {server_name}.{tool_name}: {e}")
-            
+
             # Special handling for vibe server - try to auto-enable on errors
             if server_name == "vibe":
                 try:
-                    from ..config_loader import config
+                    from ..config_loader import config  # noqa: E402
+
                     if not config.get("mcp.vibe.enabled", False):
                         logger.warning("[MCP] Vibe tool failed but server disabled - auto-enabling")
                         # For now, just log. In future, could dynamically enable
-                        logger.info("[MCP] Consider enabling vibe in config.yaml to prevent auto-enable issues")
+                        logger.info(
+                            "[MCP] Consider enabling vibe in config.yaml to prevent auto-enable issues"
+                        )
                 except Exception as config_err:
                     logger.error(f"[MCP] Failed to check vibe config: {config_err}")
-            
+
             # If connection died, try to reconnect once
             if "Connection closed" in str(e) or "Broken pipe" in str(e):
-                logger.warning(
-                    f"Connection lost to {server_name}, attempting reconnection..."
-                )
+                logger.warning(f"Connection lost to {server_name}, attempting reconnection...")
                 async with self._lock:
                     if server_name in self.sessions:
                         del self.sessions[server_name]
@@ -452,7 +430,8 @@ class MCPManager:
                 logger.warning(f"[MCP] Vibe server unhealthy, attempting auto-enable: {e}")
                 # Try to enable vibe via self-healing
                 try:
-                    from ..config_loader import config
+                    from ..config_loader import config  # noqa: E402
+
                     if not config.get("mcp.vibe.enabled", False):
                         logger.info("[MCP] Auto-enabling vibe server due to health check failure")
                         # Update config to enable vibe
@@ -506,12 +485,9 @@ class MCPManager:
                     last_exc = e
                     # If this is a resource fork error (EAGAIN), do a backoff and retry
                     try:
-                        import errno as _errno
+                        import errno as _errno  # noqa: E402
 
-                        if (
-                            isinstance(e, OSError)
-                            and getattr(e, "errno", None) == _errno.EAGAIN
-                        ):
+                        if isinstance(e, OSError) and getattr(e, "errno", None) == _errno.EAGAIN:
                             wait = self._restart_backoff_base * (2 ** (attempt - 1))
                             logger.warning(
                                 f"[MCP] Spawn EAGAIN for {server_name}, backing off {wait:.1f}s (attempt {attempt})"
@@ -553,14 +529,10 @@ class MCPManager:
                     is_healthy = await self.health_check(server_name)
 
                     if not is_healthy:
-                        logger.warning(
-                            f"[MCP] Server {server_name} unhealthy, restarting..."
-                        )
+                        logger.warning(f"[MCP] Server {server_name} unhealthy, restarting...")
                         success = await self.restart_server(server_name)
                         if success:
-                            logger.info(
-                                f"[MCP] Server {server_name} restarted successfully"
-                            )
+                            logger.info(f"[MCP] Server {server_name} restarted successfully")
                         else:
                             logger.error(f"[MCP] Failed to restart {server_name}")
 
@@ -611,9 +583,7 @@ class MCPManager:
                 asyncio.gather(*tasks, return_exceptions=True), timeout=2.0
             )
         except Exception:
-            all_tools_results = [
-                [] for _ in tasks
-            ]  # Fallback to empty lists on overall timeout
+            all_tools_results = [[] for _ in tasks]  # Fallback to empty lists on overall timeout
 
         # Map results back to servers
         server_tools_map = {}
@@ -628,9 +598,7 @@ class MCPManager:
             if server_name.startswith("_"):
                 continue
 
-            description = (
-                server_cfg.get("description") or "Native or custom capability."
-            )
+            description = server_cfg.get("description") or "Native or custom capability."
             status = "CONNECTED" if server_name in self.sessions else "AVAILABLE"
 
             tool_names = server_tools_map.get(server_name, [])
@@ -652,18 +620,14 @@ class MCPManager:
         Generates a detailed summary of all available tools across all servers,
         including their input schemas (arguments) for precise LLM mapping.
         """
-        import json
+        import json  # noqa: E402
 
         summary = "AVAILABLE MCP TOOLS (Full Specs):\n"
-        configured_servers = [
-            s for s in self.config.get("mcpServers", {}) if not s.startswith("_")
-        ]
+        configured_servers = [s for s in self.config.get("mcpServers", {}) if not s.startswith("_")]
 
         async def fetch_tools(server_name):
             try:
-                tools = await asyncio.wait_for(
-                    self.list_tools(server_name), timeout=5.0
-                )
+                tools = await asyncio.wait_for(self.list_tools(server_name), timeout=5.0)
                 return server_name, tools
             except Exception:
                 return server_name, []
@@ -679,9 +643,7 @@ class MCPManager:
                     schema = getattr(tool, "inputSchema", {})
 
                     # Format as compact JSON for the LLM
-                    schema_str = (
-                        json.dumps(schema, ensure_ascii=False) if schema else "{}"
-                    )
+                    schema_str = json.dumps(schema, ensure_ascii=False) if schema else "{}"
 
                     summary += f"- {name}: {desc}\n"
                     if schema:
@@ -689,8 +651,7 @@ class MCPManager:
                         params = schema.get("properties", {})
                         if params:
                             param_list = [
-                                f"{p} ({v.get('type', 'any')})"
-                                for p, v in params.items()
+                                f"{p} ({v.get('type', 'any')})" for p, v in params.items()
                             ]
                             summary += f"  Args: {', '.join(param_list)}\n"
                         summary += f"  Schema: {schema_str}\n"

@@ -49,7 +49,7 @@ class NotificationManager:
             sound_cmd = 'sound name "Ping"' if sound else ""
             subtitle_cmd = f'subtitle "{subtitle}"' if subtitle else ""
 
-            script = f"""
+            script = """
             display notification "{message}" with title "{title}" {subtitle_cmd} {sound_cmd}
             """
 
@@ -85,9 +85,7 @@ class NotificationManager:
         message = f"Крок {step_id} не вдався після {attempts} спроб"
         subtitle = error[:50] + "..." if len(error) > 50 else error
 
-        return self.send_notification(
-            title=title, message=message, subtitle=subtitle, sound=True
-        )
+        return self.send_notification(title=title, message=message, subtitle=subtitle, sound=True)
 
     def request_approval(self, action: str, risk_level: str = "medium") -> bool:
         """
@@ -124,7 +122,7 @@ class NotificationManager:
                 "critical": "stop",
             }.get(risk_level, "note")
 
-            script = f"""
+            script = """
             display dialog "{action}" with title "AtlasTrinity - Підтвердження" buttons {{"Відмовити", "Дозволити"}} default button "Відмовити" with icon {icon}
             """
 
@@ -159,9 +157,7 @@ class NotificationManager:
             logger.error(f"[NOTIFY] Failed to request approval: {e}")
             return False
 
-    def show_progress(
-        self, current_step: int, total_steps: int, description: str = ""
-    ) -> bool:
+    def show_progress(self, current_step: int, total_steps: int, description: str = "") -> bool:
         """
         Show progress notification.
 
@@ -184,9 +180,7 @@ class NotificationManager:
 
         return True
 
-    def show_completion(
-        self, task: str, success: bool, duration_seconds: float = 0
-    ) -> bool:
+    def show_completion(self, task: str, success: bool, duration_seconds: float = 0) -> bool:
         """
         Show task completion notification.
 

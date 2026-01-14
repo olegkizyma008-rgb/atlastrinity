@@ -51,14 +51,10 @@ class KnowledgeGraph:
         try:
             async with await db_manager.get_session() as session:
                 # Upsert node
-                stmt = insert(KGNode).values(
-                    id=node_id, type=node_type, attributes=attributes
-                )
+                stmt = insert(KGNode).values(id=node_id, type=node_type, attributes=attributes)
                 stmt = stmt.on_conflict_do_update(
                     index_elements=["id"],
-                    set_=dict(
-                        attributes=attributes, last_updated=stmt.excluded.last_updated
-                    ),
+                    set_=dict(attributes=attributes, last_updated=stmt.excluded.last_updated),
                 )
                 await session.execute(stmt)
                 await session.commit()
@@ -105,27 +101,17 @@ class KnowledgeGraph:
             async with await db_manager.get_session() as session:
                 # CRITICAL: Verify node existence to avoid FK violations
                 # kg_edges_source_id_fkey or kg_edges_target_id_fkey
-                check_src = await session.execute(
-                    select(KGNode).where(KGNode.id == source_id)
-                )
+                check_src = await session.execute(select(KGNode).where(KGNode.id == source_id))
                 if not check_src.scalar():
-                    logger.warning(
-                        f"[GRAPH] Source node {source_id} not found. Cannot add edge."
-                    )
+                    logger.warning(f"[GRAPH] Source node {source_id} not found. Cannot add edge.")
                     return False
 
-                check_tg = await session.execute(
-                    select(KGNode).where(KGNode.id == target_id)
-                )
+                check_tg = await session.execute(select(KGNode).where(KGNode.id == target_id))
                 if not check_tg.scalar():
-                    logger.warning(
-                        f"[GRAPH] Target node {target_id} not found. Cannot add edge."
-                    )
+                    logger.warning(f"[GRAPH] Target node {target_id} not found. Cannot add edge.")
                     return False
 
-                entry = KGEdge(
-                    source_id=source_id, target_id=target_id, relation=relation
-                )
+                entry = KGEdge(source_id=source_id, target_id=target_id, relation=relation)
                 session.add(entry)
                 await session.commit()
             logger.info(f"[GRAPH] Edge: {source_id} -[{relation}]-> {target_id}")

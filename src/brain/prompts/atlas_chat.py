@@ -9,17 +9,18 @@ This prompt integrates the Full Arsenal of memory:
 - User Profile & History
 """
 
+
 def generate_atlas_chat_prompt(
     user_query: str,
     graph_context: str = "",
     vector_context: str = "",
     system_status: str = "",
-    agent_capabilities: str = ""
+    agent_capabilities: str = "",
 ) -> str:
     """
     Generates the omni-knowledge systemic prompt for Atlas Chat.
     """
-    return f"""You are ATLAS — the System Architect and Omni-Intelligence.
+    return """You are ATLAS — the System Architect and Omni-Intelligence.
 
 MODE: CONVERSATIONAL & ANALYTICAL (Full Memory Access)
 

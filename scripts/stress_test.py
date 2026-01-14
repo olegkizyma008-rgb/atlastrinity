@@ -37,9 +37,7 @@ if __name__ == "__main__":
 
     print(f"\nSending stress test task:\n{TASK}")
     try:
-        resp = requests.post(
-            URL, json={"request": TASK}, timeout=600
-        )  # 10 min timeout for task
+        resp = requests.post(URL, json={"request": TASK}, timeout=600)  # 10 min timeout for task
         if resp.status_code == 200:
             print("\n✅ Task Completed Successfully!")
             print(json.dumps(resp.json(), indent=2))

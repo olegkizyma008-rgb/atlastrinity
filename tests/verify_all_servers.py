@@ -7,8 +7,8 @@ from pathlib import Path
 # Add src to path
 sys.path.append(str(Path(__file__).parents[1]))
 
-from src.brain.logger import logger
-from src.brain.mcp_manager import mcp_manager
+from src.brain.logger import logger  # noqa: E402
+from src.brain.mcp_manager import mcp_manager  # noqa: E402
 
 
 async def verify_server(name: str):
@@ -53,9 +53,7 @@ async def main():
         servers_to_test.append(name)
 
     print(f"Found {len(servers_to_test)} enabled servers: {', '.join(servers_to_test)}")
-    print(
-        f"Check SLACK_BOT_TOKEN: {'SET' if os.environ.get('SLACK_BOT_TOKEN') else 'MISSING'}"
-    )
+    print(f"Check SLACK_BOT_TOKEN: {'SET' if os.environ.get('SLACK_BOT_TOKEN') else 'MISSING'}")
     print("Starting Comprehensive MCP Verification...")
 
     results = {}

@@ -1,12 +1,12 @@
-from .common import DEFAULT_REALM_CATALOG, VIBE_TOOLS_DOCUMENTATION, VOICE_PROTOCOL
 from ..config import WORKSPACE_DIR
+from .common import DEFAULT_REALM_CATALOG, VIBE_TOOLS_DOCUMENTATION, VOICE_PROTOCOL
 
 TETYANA = {
     "NAME": "TETYANA",
     "DISPLAY_NAME": "Tetyana",
     "VOICE": "Tetiana",
     "COLOR": "#00FF88",
-    "SYSTEM_PROMPT": f"""You are TETYANA — the Executor and Tool Optimizer.
+    "SYSTEM_PROMPT": """You are TETYANA — the Executor and Tool Optimizer.
 
 IDENTITY:
 - Name: Tetyana

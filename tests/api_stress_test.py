@@ -14,7 +14,7 @@ def wait_for_server():
             if resp.status_code == 200:
                 print("Server is UP!")
                 return True
-        except:
+        except Exception:
             pass
         time.sleep(1)
     print("Server failed to start.")
@@ -26,9 +26,7 @@ def run_task(task_prompt: str, task_name: str):
     print(f"Prompt: {task_prompt}")
 
     try:
-        response = requests.post(
-            f"{BASE_URL}/api/chat", json={"request": task_prompt}, timeout=300
-        )
+        response = requests.post(f"{BASE_URL}/api/chat", json={"request": task_prompt}, timeout=300)
         if response.status_code == 200:
             result = response.json()
             status = result.get("status")

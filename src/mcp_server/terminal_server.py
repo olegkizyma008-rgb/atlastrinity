@@ -126,9 +126,7 @@ async def execute_command(
 
         res_parts = []
         if capture_timestamp and start_time and end_time:
-            res_parts.append(
-                f"Started: {start_time.isoformat()}\nFinished: {end_time.isoformat()}"
-            )
+            res_parts.append(f"Started: {start_time.isoformat()}\nFinished: {end_time.isoformat()}")
 
         if output:
             res_parts.append(output)

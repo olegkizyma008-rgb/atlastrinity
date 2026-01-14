@@ -49,9 +49,7 @@ AGENT_VOICES = {
     "tetyana": VoiceConfig(
         name="Tetyana", voice_id="Tetiana", description="Female voice for Executor"
     ),
-    "grisha": VoiceConfig(
-        name="Grisha", voice_id="Mykyta", description="Male voice for Visor"
-    ),
+    "grisha": VoiceConfig(name="Grisha", voice_id="Mykyta", description="Male voice for Visor"),
 }
 
 
@@ -263,9 +261,7 @@ class VoiceManager:
                         os.chdir(old_path)
 
                 with tmp_cwd(str(cache_dir)):
-                    self._tts = UkrainianTTS(
-                        cache_folder=str(cache_dir), device=self.device
-                    )
+                    self._tts = UkrainianTTS(cache_folder=str(cache_dir), device=self.device)
             except Exception as e:
                 print(f"[TTS] Failed to initialize engine: {e}")
                 self._tts = None

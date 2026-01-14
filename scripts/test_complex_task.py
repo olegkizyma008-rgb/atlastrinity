@@ -5,10 +5,10 @@ import sys
 # Ensure project root is in path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.brain.db.manager import db_manager
-from src.brain.logger import logger
-from src.brain.memory import long_term_memory
-from src.brain.orchestrator import Trinity
+from src.brain.db.manager import db_manager  # noqa: E402
+from src.brain.logger import logger  # noqa: E402
+from src.brain.memory import long_term_memory  # noqa: E402
+from src.brain.orchestrator import Trinity  # noqa: E402
 
 
 async def main():
@@ -52,14 +52,14 @@ async def main():
 
     except Exception as e:
         print(f"\nКритична помилка під час виконання: {e}")
-        import traceback
+        import traceback  # noqa: E402
 
         traceback.print_exc()
 
 
 if __name__ == "__main__":
     # Ensure logs aren't too noisy for stdout but visible
-    import logging
+    import logging  # noqa: E402
 
     logging.getLogger("brain").setLevel(logging.INFO)
 

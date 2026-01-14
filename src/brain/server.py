@@ -4,13 +4,12 @@ Exposes the orchestrator via FastAPI for Electron IPC
 """
 
 import os
+
 # Suppress espnet2 UserWarning about non-writable tensors
 import warnings
 from pathlib import Path
 
-warnings.filterwarnings(
-    "ignore", category=UserWarning, module="espnet2.torch_utils.device_funcs"
-)
+warnings.filterwarnings("ignore", category=UserWarning, module="espnet2.torch_utils.device_funcs")
 
 # Import CONFIG_ROOT before using it
 from .config import CONFIG_ROOT  # noqa: E402
@@ -34,8 +33,7 @@ if github_token:
 import asyncio  # noqa: E402
 from typing import Any, Dict, Optional  # noqa: E402
 
-from fastapi import (BackgroundTasks, FastAPI, File, Form, HTTPException,  # noqa: E402
-                     UploadFile)
+from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
@@ -92,9 +90,7 @@ async def lifespan(app: FastAPI):
             if model:
                 logger.info("[LifeSpan] STT model loaded successfully.")
             else:
-                logger.warning(
-                    "[LifeSpan] STT model unavailable - faster-whisper not installed."
-                )
+                logger.warning("[LifeSpan] STT model unavailable - faster-whisper not installed.")
             # Warm up TTS engine
             _ = trinity.voice.engine
             logger.info("[LifeSpan] Voice engines are ready.")
@@ -180,14 +176,10 @@ async def speech_to_text(audio: UploadFile = File(...)):
 
         # CHECK: Is the agent currently speaking?
         if trinity.voice.is_speaking:
-            logger.info(
-                "[STT] Agent is speaking, ignoring audio to avoid feedback loop."
-            )
+            logger.info("[STT] Agent is speaking, ignoring audio to avoid feedback loop.")
             return {"text": "", "confidence": 0, "ignored": True}
 
-        logger.info(
-            f"[STT] Received audio: content_type={content_type}, using suffix={suffix}"
-        )
+        logger.info(f"[STT] Received audio: content_type={content_type}, using suffix={suffix}")
 
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
             content = await audio.read()
@@ -229,9 +221,7 @@ async def speech_to_text(audio: UploadFile = File(...)):
                     logger.info(f"[STT] Converted to WAV: {wav_path}")
                     os.unlink(temp_file_path)
                 else:
-                    logger.warning(
-                        f"[STT] FFmpeg failed: {result.stderr}, using original file"
-                    )
+                    logger.warning(f"[STT] FFmpeg failed: {result.stderr}, using original file")
                     wav_path = temp_file_path
             except FileNotFoundError:
                 logger.warning("[STT] FFmpeg not found, using original file")
@@ -257,9 +247,7 @@ async def speech_to_text(audio: UploadFile = File(...)):
             logger.info(f"[STT] Echo detected: '{result.text}', ignoring.")
             return {"text": "", "confidence": 0, "ignored": True}
 
-        logger.info(
-            f"[STT] Result: text='{result.text}', confidence={result.confidence}"
-        )
+        logger.info(f"[STT] Result: text='{result.text}', confidence={result.confidence}")
 
         # Clean up temp file(s)
         if os.path.exists(wav_path):
@@ -322,9 +310,7 @@ async def smart_speech_to_text(
                 "ignored": True,
             }
 
-        logger.info(
-            f"[STT] Received audio: content_type={content_type}, using suffix={suffix}"
-        )
+        logger.info(f"[STT] Received audio: content_type={content_type}, using suffix={suffix}")
 
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
             content = await audio.read()
@@ -363,9 +349,7 @@ async def smart_speech_to_text(
                     logger.info(f"[STT] Converted to WAV: {wav_path}")
                     os.unlink(temp_file_path)  # Delete original
                 else:
-                    logger.warning(
-                        f"[STT] FFmpeg failed: {result.stderr}, using original file"
-                    )
+                    logger.warning(f"[STT] FFmpeg failed: {result.stderr}, using original file")
                     wav_path = temp_file_path
             except FileNotFoundError:
                 logger.warning("[STT] FFmpeg not found, using original file")
@@ -375,9 +359,7 @@ async def smart_speech_to_text(
                 wav_path = temp_file_path
 
         # Smart analysis with context (async)
-        result = await stt.transcribe_with_analysis(
-            wav_path, previous_text=previous_text
-        )
+        result = await stt.transcribe_with_analysis(wav_path, previous_text=previous_text)
 
         # Echo Cancellation (Smart/Time-gated)
         import time

@@ -30,18 +30,14 @@ def setup_logging(name: str = "brain"):
         log_file, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"
     )
     file_handler.setLevel(logging.INFO)
-    file_formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    file_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     file_handler.setFormatter(file_formatter)
     logger.addHandler(file_handler)
 
     # Stream Handler (Console)
     stream_handler = logging.StreamHandler()
     stream_handler.setLevel(logging.INFO)
-    stream_formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    stream_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     stream_handler.setFormatter(stream_formatter)
     logger.addHandler(stream_handler)
 

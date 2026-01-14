@@ -33,18 +33,14 @@ def check_redis_installed() -> bool:
 
 def check_docker_installed() -> bool:
     """Check if Docker Desktop is installed"""
-    return (
-        os.path.exists("/Applications/Docker.app") or shutil.which("docker") is not None
-    )
+    return os.path.exists("/Applications/Docker.app") or shutil.which("docker") is not None
 
 
 def is_docker_running() -> bool:
     """Check if Docker daemon is active"""
     # docker info is a reliable way to check if daemon is responsive
     try:
-        result = subprocess.run(
-            ["docker", "info"], capture_output=True, text=True, timeout=5
-        )
+        result = subprocess.run(["docker", "info"], capture_output=True, text=True, timeout=5)
         return result.returncode == 0
     except Exception:
         return False
@@ -77,9 +73,7 @@ def ensure_redis(force_check: bool = False):
         logger.info("[Services] Performing first-run Redis check/update...")
 
     if not is_brew_available():
-        logger.warning(
-            "[Services] Homebrew not found. Cannot automate Redis management."
-        )
+        logger.warning("[Services] Homebrew not found. Cannot automate Redis management.")
         return False
 
     installed = check_redis_installed()
@@ -129,17 +123,13 @@ def ensure_docker(force_check: bool = False):
         logger.info("[Services] Performing first-run Docker check/update...")
 
     if not is_brew_available():
-        logger.warning(
-            "[Services] Homebrew not found. Cannot automate Docker management."
-        )
+        logger.warning("[Services] Homebrew not found. Cannot automate Docker management.")
         return False
 
     installed = check_docker_installed()
 
     if not installed:
-        logger.info(
-            "[Services] Docker not found. Installing Docker Desktop via Homebrew Cask..."
-        )
+        logger.info("[Services] Docker not found. Installing Docker Desktop via Homebrew Cask...")
         # Note: Brew might ask for password via Mac secondary dialog
         if run_command(["brew", "install", "--cask", "docker"]):
             logger.info("[Services] ✓ Docker Desktop installed.")
@@ -212,20 +202,14 @@ def ensure_postgres(force_check: bool = False) -> bool:
                 flag_file.touch()
             return True
         else:
-            logger.info(
-                "[Services] PostgreSQL is not responding. Attempting to start via brew..."
-            )
+            logger.info("[Services] PostgreSQL is not responding. Attempting to start via brew...")
     else:
-        logger.warning(
-            "[Services] pg_isready not found. Cannot verify connectivity precisely."
-        )
+        logger.warning("[Services] pg_isready not found. Cannot verify connectivity precisely.")
 
     # 2. Try to start via Homebrew
     if is_brew_available():
         # Check if installed
-        res = subprocess.run(
-            ["brew", "list", "--formula", "postgresql@17"], capture_output=True
-        )
+        res = subprocess.run(["brew", "list", "--formula", "postgresql@17"], capture_output=True)
         if res.returncode != 0:
             logger.info("[Services] PostgreSQL@17 not installed. Installing...")
             if not run_command(["brew", "install", "postgresql@17"]):
@@ -330,9 +314,7 @@ async def ensure_all_services(force_check: bool = False):
             logger.info("[Services] All system services are ready.")
         else:
             ServiceStatus.status_message = "Some services failed to start"
-            logger.warning(
-                f"[Services] Readiness: Redis={redis_ok}, Docker={docker_ok}"
-            )
+            logger.warning(f"[Services] Readiness: Redis={redis_ok}, Docker={docker_ok}")
 
     except Exception as e:
         ServiceStatus.status_message = f"Service check error: {str(e)}"

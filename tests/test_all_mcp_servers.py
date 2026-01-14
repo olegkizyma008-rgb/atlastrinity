@@ -13,7 +13,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.brain.mcp_manager import mcp_manager
+from src.brain.mcp_manager import mcp_manager  # noqa: E402
 
 
 # Color codes for terminal output
@@ -47,9 +47,7 @@ async def run_server_test(server_name: str, test_cases: list) -> dict:
         print(f"{Colors.OKBLUE}→ Listing tools...{Colors.ENDC}")
 
         try:
-            tools = await asyncio.wait_for(
-                mcp_manager.list_tools(server_name), timeout=10.0
-            )
+            tools = await asyncio.wait_for(mcp_manager.list_tools(server_name), timeout=10.0)
         except asyncio.TimeoutError:
             results["status"] = "timeout"
             results["error"] = "Tool listing timeout (>10s)"
@@ -114,7 +112,7 @@ async def run_server_test(server_name: str, test_cases: list) -> dict:
 
 
 # Pytest wrapper
-import pytest
+# Pytest wrapper
 
 
 @pytest.mark.asyncio
@@ -122,9 +120,7 @@ async def test_mcp_server(server_name: str, test_cases: list):
     """Test MCP server with timeout. Skip if server unavailable."""
     try:
         # Add timeout to prevent hanging on unavailable servers
-        result = await asyncio.wait_for(
-            run_server_test(server_name, test_cases), timeout=15.0
-        )
+        result = await asyncio.wait_for(run_server_test(server_name, test_cases), timeout=15.0)
 
         # Skip if server not configured or unavailable, assert if connected
         if result["status"] == "not_configured":
@@ -132,9 +128,7 @@ async def test_mcp_server(server_name: str, test_cases: list):
         elif result["status"] == "timeout":
             pytest.skip(f"Server {server_name} connection timeout")
         elif result["status"] == "error":
-            pytest.skip(
-                f"Server {server_name} unavailable: {result.get('error', 'Unknown')}"
-            )
+            pytest.skip(f"Server {server_name} unavailable: {result.get('error', 'Unknown')}")
 
         assert result["status"] in (
             "connected",
@@ -252,9 +246,7 @@ async def main():
                 f"{Colors.OKGREEN}✓ {server:20} | {tool_count} tools | {test_count}/{total_tests} tests passed{Colors.ENDC}"
             )
         elif status == "no_tools":
-            print(
-                f"{Colors.WARNING}⚠ {server:20} | Connected but no tools{Colors.ENDC}"
-            )
+            print(f"{Colors.WARNING}⚠ {server:20} | Connected but no tools{Colors.ENDC}")
         else:
             error = result.get("error", "Unknown error")
             print(f"{Colors.FAIL}✗ {server:20} | {error[:40]}...{Colors.ENDC}")

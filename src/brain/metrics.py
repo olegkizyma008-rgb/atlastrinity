@@ -36,12 +36,8 @@ class MetricsCollector:
         if time_delta <= 0:
             time_delta = 0.1  # Prevent div by zero
 
-        bytes_sent = (
-            current_net_io.bytes_sent - self._last_net_io.bytes_sent
-        ) / time_delta
-        bytes_recv = (
-            current_net_io.bytes_recv - self._last_net_io.bytes_recv
-        ) / time_delta
+        bytes_sent = (current_net_io.bytes_sent - self._last_net_io.bytes_sent) / time_delta
+        bytes_recv = (current_net_io.bytes_recv - self._last_net_io.bytes_recv) / time_delta
 
         self._last_net_io = current_net_io
         self._last_net_time = current_time

@@ -54,7 +54,7 @@ def check_secrets() -> bool:
         if os.getenv(secret):
             print(f"✅ {secret} found (optional)")
         else:
-            print( "ℹ️  INFO: {secret} not set ({description})")
+            print("ℹ️  INFO: {secret} not set ({description})")
 
     # Report results
     print()

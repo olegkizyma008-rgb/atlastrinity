@@ -7,8 +7,9 @@ Model: GPT-4.1
 """
 
 import asyncio
-import os
 import json
+import os
+
 # Robust path handling for both Dev and Production (Packaged)
 import sys
 import time
@@ -87,9 +88,7 @@ class Tetyana:
         agent_config = config.get_agent_config("tetyana")
         final_model = model_name
         if model_name == "grok-code-fast-1":  # default parameter
-            final_model = agent_config.get("model") or os.getenv(
-                "COPILOT_MODEL", "gpt-4.1"
-            )
+            final_model = agent_config.get("model") or os.getenv("COPILOT_MODEL", "gpt-4.1")
 
         self.llm = CopilotLLM(model_name=final_model)
 
@@ -111,8 +110,8 @@ class Tetyana:
 
     async def get_grisha_feedback(self, step_id: int) -> Optional[str]:
         """Retrieve Grisha's detailed rejection report from notes or memory"""
-        from ..logger import logger
-        from ..mcp_manager import mcp_manager
+        from ..logger import logger  # noqa: E402
+        from ..mcp_manager import mcp_manager  # noqa: E402
 
         # Try notes first (faster)
         try:
@@ -135,10 +134,12 @@ class Tetyana:
                     getattr(result, "structuredContent"), dict
                 ):
                     notes_result = result.structuredContent.get("result", {})
-                elif hasattr(result, "content") and len(result.content) > 0 and hasattr(
-                    result.content[0], "text"
+                elif (
+                    hasattr(result, "content")
+                    and len(result.content) > 0
+                    and hasattr(result.content[0], "text")
                 ):
-                    import json as _json
+                    import json as _json  # noqa: E402
 
                     try:
                         notes_result = _json.loads(result.content[0].text)
@@ -147,7 +148,11 @@ class Tetyana:
             except Exception:
                 notes_result = None
 
-            if isinstance(notes_result, dict) and notes_result.get("success") and notes_result.get("notes"):
+            if (
+                isinstance(notes_result, dict)
+                and notes_result.get("success")
+                and notes_result.get("notes")
+            ):
                 notes = notes_result["notes"]
                 if notes and len(notes) > 0:
                     note_id = notes[0]["id"]
@@ -162,9 +167,13 @@ class Tetyana:
                     elif hasattr(note_result, "structuredContent") and isinstance(
                         getattr(note_result, "structuredContent"), dict
                     ):
-                        note_content = note_result.structuredContent.get("result", {}).get("content", "")
-                    elif hasattr(note_result, "content") and len(note_result.content) > 0 and hasattr(
-                        note_result.content[0], "text"
+                        note_content = note_result.structuredContent.get("result", {}).get(
+                            "content", ""
+                        )
+                    elif (
+                        hasattr(note_result, "content")
+                        and len(note_result.content) > 0
+                        and hasattr(note_result.content[0], "text")
                     ):
                         try:
                             note_parsed = json.loads(note_result.content[0].text)
@@ -217,10 +226,10 @@ class Tetyana:
         2. Tool Execution
         3. Technical Reflexion (Self-correction on failure) - SKIPPED for transient errors
         """
-        from langchain_core.messages import HumanMessage, SystemMessage
+        from langchain_core.messages import HumanMessage, SystemMessage  # noqa: E402
 
-        from ..logger import logger
-        from ..state_manager import state_manager
+        from ..logger import logger  # noqa: E402
+        from ..state_manager import state_manager  # noqa: E402
 
         self.attempt_count = attempt
 
@@ -243,12 +252,12 @@ class Tetyana:
                 "[TETYANA] Detected consent/approval request step. Opening Terminal for user input."
             )
             # Open Terminal so user can see/respond
-            import subprocess
+            import subprocess  # noqa: E402
 
             subprocess.run(["open", "-a", "Terminal"], check=False)
 
             # Create a simple message for the user
-            consent_msg = f"""\nATLAS TRINITY SYSTEM REQUEST:
+            consent_msg = """\nATLAS TRINITY SYSTEM REQUEST:
 
 Action: {step.get('action')}
 Expected: {step.get('expected_result', 'User confirmation')}
@@ -295,9 +304,7 @@ Please type your response below and press Enter:
         # Fetch Grisha's feedback for retry attempts
         grisha_feedback = ""
         if attempt > 1:
-            logger.info(
-                f"[TETYANA] Attempt {attempt} - fetching Grisha's rejection feedback..."
-            )
+            logger.info(f"[TETYANA] Attempt {attempt} - fetching Grisha's rejection feedback...")
             grisha_feedback = await self.get_grisha_feedback(step.get("id")) or ""
 
         target_server = step.get("realm") or step.get("tool") or step.get("server")
@@ -329,21 +336,19 @@ Please type your response below and press Enter:
         else:
             # Full reasoning path for complex/ambiguous steps
             configured_servers = mcp_manager.config.get("mcpServers", {})
-            if target_server in configured_servers and not target_server.startswith(
-                "_"
-            ):
+            if target_server in configured_servers and not target_server.startswith("_"):
                 logger.info(f"[TETYANA] Dynamically inspecting server: {target_server}")
                 tools = await mcp_manager.list_tools(target_server)
-                import json
+                import json  # noqa: E402
 
-                tools_summary = (
-                    f"\n--- DETAILED SPECS FOR SERVER: {target_server} ---\n"
-                )
+                tools_summary = f"\n--- DETAILED SPECS FOR SERVER: {target_server} ---\n"
                 for t in tools:
                     name = getattr(t, "name", str(t))
                     desc = getattr(t, "description", "")
                     schema = getattr(t, "inputSchema", {})
-                    tools_summary += f"- {name}: {desc}\n  Schema: {json.dumps(schema, ensure_ascii=False)}\n"
+                    tools_summary += (
+                        f"- {name}: {desc}\n  Schema: {json.dumps(schema, ensure_ascii=False)}\n"
+                    )
             else:
                 tools_summary = getattr(
                     shared_context,
@@ -411,9 +416,7 @@ Please type your response below and press Enter:
             error_msg = tool_result.get("error", "Unknown error")
 
             # Check for transient errors - simple retry without LLM
-            is_transient = any(
-                err.lower() in error_msg.lower() for err in TRANSIENT_ERRORS
-            )
+            is_transient = any(err.lower() in error_msg.lower() for err in TRANSIENT_ERRORS)
 
             if is_transient:
                 logger.info(
@@ -456,18 +459,14 @@ Please type your response below and press Enter:
                 reflexion = self._parse_response(reflexion_resp.content)
 
                 if reflexion.get("requires_atlas"):
-                    logger.info(
-                        "[TETYANA] Reflexion determined Atlas intervention is required."
-                    )
+                    logger.info("[TETYANA] Reflexion determined Atlas intervention is required.")
                     break
 
                 fix_action = reflexion.get("fix_attempt")
                 if not fix_action:
                     break
 
-                logger.info(
-                    f"[TETYANA] Attempting autonomous fix: {fix_action.get('tool')}"
-                )
+                logger.info(f"[TETYANA] Attempting autonomous fix: {fix_action.get('tool')}")
                 tool_result = await self._execute_tool(fix_action)
 
                 if tool_result.get("success"):
@@ -477,14 +476,16 @@ Please type your response below and press Enter:
                 logger.error(f"[TETYANA] Reflexion failed: {re}")
                 break
 
-        voice_msg = tool_result.get("voice_message") or (monologue.get("voice_message") if attempt == 1 else None)
-        
+        voice_msg = tool_result.get("voice_message") or (
+            monologue.get("voice_message") if attempt == 1 else None
+        )
+
         # Fallback if no specific voice message from LLM/Tool
         if not voice_msg and attempt == 1:
             voice_msg = self.get_voice_message(
                 "completed" if tool_result.get("success") else "failed",
                 step=step.get("id", self.current_step),
-                description=step.get("action", "")
+                description=step.get("action", ""),
             )
 
         res = StepResult(
@@ -512,7 +513,7 @@ Please type your response below and press Enter:
 
     async def _execute_tool(self, tool_call: Dict[str, Any]) -> Dict[str, Any]:
         """Executes the tool call with robust mapping and synonym support"""
-        from ..logger import logger
+        from ..logger import logger  # noqa: E402
 
         # Safety check: ensure tool_call is a dict
         if not isinstance(tool_call, dict):
@@ -559,15 +560,20 @@ Please type your response below and press Enter:
             "brew",
         ]
         fs_synonyms = ["filesystem", "fs", "file", "файлова система", "files"]
-        scraper_synonyms = ["scrape_and_extract", "scrape", "extract", "scraper", "web_scraper", "justwatch_api", "reelgood_api"]
+        scraper_synonyms = [
+            "scrape_and_extract",
+            "scrape",
+            "extract",
+            "scraper",
+            "web_scraper",
+            "justwatch_api",
+            "reelgood_api",
+        ]
         search_synonyms = ["duckduckgo_search", "duckduckgo", "search", "google", "bing", "ddg"]
         discovery_synonyms = ["list_tools", "help", "show_tools", "inspect"]
 
         # Intent-based routing
-        if any(
-            tool_name == syn or tool_name.split(".")[0] == syn
-            for syn in terminal_synonyms
-        ):
+        if any(tool_name == syn or tool_name.split(".")[0] == syn for syn in terminal_synonyms):
             original_tool = tool_name
             tool_name = "terminal"
             # If the tool name was a command synonym, ensure it's in the args
@@ -594,9 +600,7 @@ Please type your response below and press Enter:
             elif original_tool in ["osascript", "applescript"]:
                 cmd = args.get("command") or args.get("cmd") or args.get("script") or ""
                 args["command"] = (
-                    f"osascript -e '{cmd}'"
-                    if "'" not in cmd
-                    else f'osascript -e "{cmd}"'
+                    f"osascript -e '{cmd}'" if "'" not in cmd else f'osascript -e "{cmd}"'
                 )
             else:
                 # Fallback for generic 'terminal' tool call matching
@@ -613,15 +617,11 @@ Please type your response below and press Enter:
                     args["command"] = str(cmd)
             logger.info(f"[TETYANA] Syn-map: {original_tool} -> {tool_name}")
 
-        elif any(
-            tool_name == syn or tool_name.split(".")[0] == syn for syn in fs_synonyms
-        ):
+        elif any(tool_name == syn or tool_name.split(".")[0] == syn for syn in fs_synonyms):
             tool_name = "filesystem"
             logger.info("[TETYANA] FS-map: routing to filesystem")
 
-        elif any(
-            tool_name == syn or tool_name.split(".")[0] == syn for syn in scraper_synonyms
-        ):
+        elif any(tool_name == syn or tool_name.split(".")[0] == syn for syn in scraper_synonyms):
             # Map 'scrape_and_extract' or 'justwatch_api' to 'fetch' if URL provided, else search
             if "url" in args or "urls" in args:
                 tool_name = "fetch"
@@ -630,15 +630,11 @@ Please type your response below and press Enter:
                 tool_name = "duckduckgo-search"
                 logger.info(f"[TETYANA] Scraper-map: {tool_name} -> duckduckgo-search")
 
-        elif any(
-            tool_name == syn or tool_name.split(".")[0] == syn for syn in search_synonyms
-        ):
+        elif any(tool_name == syn or tool_name.split(".")[0] == syn for syn in search_synonyms):
             tool_name = "duckduckgo-search"
             logger.info(f"[TETYANA] Search-map: {tool_name} -> duckduckgo-search")
 
-        elif any(
-            tool_name == syn for syn in discovery_synonyms
-        ):
+        elif any(tool_name == syn for syn in discovery_synonyms):
             # Meta-tool call: list_tools
             logger.info("[TETYANA] Meta-map: list_tools -> dynamic catalog")
             catalog = await mcp_manager.get_mcp_catalog()
@@ -692,7 +688,7 @@ Please type your response below and press Enter:
             return await self._call_mcp_direct(server, mcp_tool, mcp_args)
 
         # --- DYNAMIC MCP DISPATCHER ---
-        from ..mcp_manager import mcp_manager
+        from ..mcp_manager import mcp_manager  # noqa: E402
 
         explicit_server = tool_call.get("server")
         # Normalize common aliases
@@ -715,9 +711,7 @@ Please type your response below and press Enter:
                 if explicit_server in default_map:
                     tool_name = default_map[explicit_server]
 
-            logger.info(
-                f"[TETYANA] Explicit server dispatch: {explicit_server}.{tool_name}"
-            )
+            logger.info(f"[TETYANA] Explicit server dispatch: {explicit_server}.{tool_name}")
             # Execute the direct MCP call first
             res = await self._call_mcp_direct(explicit_server, tool_name, args)
 
@@ -726,33 +720,51 @@ Please type your response below and press Enter:
             try:
                 if explicit_server in ("puppeteer", "browser"):
                     action_hint = args.get("action") or ""
-                    if tool_name in ("puppeteer_navigate", "navigate") or action_hint in ("navigate", "open") or tool_name.endswith("navigate"):
+                    if (
+                        tool_name in ("puppeteer_navigate", "navigate")
+                        or action_hint in ("navigate", "open")
+                        or tool_name.endswith("navigate")
+                    ):
                         # small delay to allow rendering
                         await asyncio.sleep(1.5)
-                        from ..logger import logger
-                        from ..mcp_manager import mcp_manager
+                        from ..logger import logger  # noqa: E402
+                        # from ..mcp_manager import mcp_manager  # noqa: E402
 
-                        logger.info(f"[TETYANA] (explicit dispatch) Collecting browser artifacts for step {args.get('step_id')}")
+                        logger.info(
+                            f"[TETYANA] (explicit dispatch) Collecting browser artifacts for step {args.get('step_id')}"
+                        )
 
                         # Document title
                         title_res = await mcp_manager.call_tool(
                             "puppeteer", "puppeteer_evaluate", {"script": "document.title"}
                         )
                         title_text = None
-                        if hasattr(title_res, "content") and len(title_res.content) > 0 and hasattr(title_res.content[0], "text"):
+                        if (
+                            hasattr(title_res, "content")
+                            and len(title_res.content) > 0
+                            and hasattr(title_res.content[0], "text")
+                        ):
                             title_text = title_res.content[0].text
 
                         # Page HTML
                         html_res = await mcp_manager.call_tool(
-                            "puppeteer", "puppeteer_evaluate", {"script": "document.documentElement.outerHTML"}
+                            "puppeteer",
+                            "puppeteer_evaluate",
+                            {"script": "document.documentElement.outerHTML"},
                         )
                         html_text = None
-                        if hasattr(html_res, "content") and len(html_res.content) > 0 and hasattr(html_res.content[0], "text"):
+                        if (
+                            hasattr(html_res, "content")
+                            and len(html_res.content) > 0
+                            and hasattr(html_res.content[0], "text")
+                        ):
                             html_text = html_res.content[0].text
 
                         # Screenshot (base64)
                         shot_res = await mcp_manager.call_tool(
-                            "puppeteer", "puppeteer_screenshot", {"name": f"grisha_step_{args.get('step_id')}", "encoded": True}
+                            "puppeteer",
+                            "puppeteer_screenshot",
+                            {"name": f"grisha_step_{args.get('step_id')}", "encoded": True},
                         )
                         screenshot_b64 = None
                         if hasattr(shot_res, "content"):
@@ -774,15 +786,18 @@ Please type your response below and press Enter:
 
                         # Save artifacts (inline to avoid refactor)
                         try:
-                            import base64
-                            from ..config import WORKSPACE_DIR, SCREENSHOTS_DIR
-                            from ..mcp_manager import mcp_manager
+                            import base64  # noqa: E402
 
-                            ts = __import__('time').strftime("%Y%m%d_%H%M%S")
+                            from ..config import SCREENSHOTS_DIR, WORKSPACE_DIR  # noqa: E402
+                            from ..mcp_manager import mcp_manager  # noqa: E402
+
+                            ts = __import__("time").strftime("%Y%m%d_%H%M%S")
                             artifacts = []
 
                             if html_text:
-                                html_file = WORKSPACE_DIR / f"grisha_step_{args.get('step_id')}_{ts}.html"
+                                html_file = (
+                                    WORKSPACE_DIR / f"grisha_step_{args.get('step_id')}_{ts}.html"
+                                )
                                 html_file.parent.mkdir(parents=True, exist_ok=True)
                                 html_file.write_text(html_text, encoding="utf-8")
                                 artifacts.append(str(html_file))
@@ -790,7 +805,9 @@ Please type your response below and press Enter:
 
                             if screenshot_b64:
                                 SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
-                                img_file = SCREENSHOTS_DIR / f"grisha_step_{args.get('step_id')}_{ts}.png"
+                                img_file = (
+                                    SCREENSHOTS_DIR / f"grisha_step_{args.get('step_id')}_{ts}.png"
+                                )
                                 with open(img_file, "wb") as f:
                                     f.write(base64.b64decode(screenshot_b64))
                                 artifacts.append(str(img_file))
@@ -798,7 +815,7 @@ Please type your response below and press Enter:
 
                             # Prepare note content
                             note_title = f"Grisha Artifact - Step {args.get('step_id')} @ {ts}"
-                            snippet = ''
+                            snippet = ""
                             if title_text:
                                 snippet += f"Title: {title_text}\n\n"
                             if html_text:
@@ -806,15 +823,26 @@ Please type your response below and press Enter:
 
                             detected = []
                             if html_text:
-                                keywords = ['phone', 'sms', 'verification', 'код', 'телефон']
+                                keywords = ["phone", "sms", "verification", "код", "телефон"]
                                 low = html_text.lower()
                                 for kw in keywords:
                                     if kw in low:
                                         detected.append(kw)
 
-                            note_content = f"Artifacts for step {args.get('step_id')} saved at {ts}.\n\nFiles:\n" + ("\n".join(artifacts) if artifacts else "(no binary files captured)") + "\n\n" + snippet
+                            note_content = (
+                                f"Artifacts for step {args.get('step_id')} saved at {ts}.\n\nFiles:\n"
+                                + (
+                                    "\n".join(artifacts)
+                                    if artifacts
+                                    else "(no binary files captured)"
+                                )
+                                + "\n\n"
+                                + snippet
+                            )
                             if detected:
-                                note_content += f"Detected keywords in HTML: {', '.join(detected)}\n"
+                                note_content += (
+                                    f"Detected keywords in HTML: {', '.join(detected)}\n"
+                                )
 
                             try:
                                 await mcp_manager.call_tool(
@@ -824,10 +852,12 @@ Please type your response below and press Enter:
                                         "title": note_title,
                                         "content": note_content,
                                         "category": "verification_artifact",
-                                        "tags": ["grisha", f"step_{args.get('step_id')}"] ,
+                                        "tags": ["grisha", f"step_{args.get('step_id')}"],
                                     },
                                 )
-                                logger.info(f"[TETYANA] Created verification artifact note for step {args.get('step_id')}")
+                                logger.info(
+                                    f"[TETYANA] Created verification artifact note for step {args.get('step_id')}"
+                                )
                             except Exception as e:
                                 logger.warning(f"[TETYANA] Failed to create artifact note: {e}")
 
@@ -845,13 +875,18 @@ Please type your response below and press Enter:
                                         ]
                                     },
                                 )
-                                logger.info(f"[TETYANA] Created memory artifact for step {args.get('step_id')}")
+                                logger.info(
+                                    f"[TETYANA] Created memory artifact for step {args.get('step_id')}"
+                                )
                             except Exception as e:
                                 logger.warning(f"[TETYANA] Failed to create memory artifact: {e}")
                         except Exception as e:
-                            logger.warning(f"[TETYANA] explicit dispatch _save_artifacts exception: {e}")
+                            logger.warning(
+                                f"[TETYANA] explicit dispatch _save_artifacts exception: {e}"
+                            )
             except Exception as e:
-                from ..logger import logger
+                from ..logger import logger  # noqa: E402
+
                 logger.warning(f"[TETYANA] Explicit dispatch artifact collection failed: {e}")
 
             return res
@@ -859,9 +894,7 @@ Please type your response below and press Enter:
         servers = mcp_manager.config.get("mcpServers", {})
         if tool_name in servers and not tool_name.startswith("_"):
             server_name = tool_name
-            logger.info(
-                f"[TETYANA] Server-map: detected direct server call to '{server_name}'"
-            )
+            logger.info(f"[TETYANA] Server-map: detected direct server call to '{server_name}'")
 
             # Use action as tool name if present, else fallback to common ones
             mcp_tool = args.get("action") or args.get("tool") or server_name
@@ -888,9 +921,9 @@ Please type your response below and press Enter:
                         "[TETYANA] Falling back to native screencapture for macos-use.screenshot"
                     )
                     try:
-                        import subprocess
-                        import tempfile
-                        from datetime import datetime
+                        import subprocess  # noqa: E402
+                        import tempfile  # noqa: E402
+                        from datetime import datetime  # noqa: E402
 
                         screen_path = os.path.join(
                             tempfile.gettempdir(),
@@ -961,10 +994,8 @@ Please type your response below and press Enter:
 
             return {"success": False, "error": error_msg}
 
-    async def _call_mcp_direct(
-        self, server: str, tool: str, args: Dict
-    ) -> Dict[str, Any]:
-        from ..mcp_manager import mcp_manager
+    async def _call_mcp_direct(self, server: str, tool: str, args: Dict) -> Dict[str, Any]:
+        from ..mcp_manager import mcp_manager  # noqa: E402
 
         try:
             res = await mcp_manager.call_tool(server, tool, args)
@@ -974,9 +1005,9 @@ Please type your response below and press Enter:
 
     async def _run_terminal_command(self, args: Dict[str, Any]) -> Dict[str, Any]:
         """Executes a bash command using Terminal MCP"""
-        import re
+        import re  # noqa: E402
 
-        from ..mcp_manager import mcp_manager
+        from ..mcp_manager import mcp_manager  # noqa: E402
 
         command = args.get("command", "") or args.get("cmd", "") or ""
 
@@ -994,9 +1025,9 @@ Please type your response below and press Enter:
     async def _perform_gui_action(self, args: Dict[str, Any]) -> Dict[str, Any]:
         """Performs GUI interaction (click, type, hotkey, search_app) using pyautogui"""
         try:
-            import pyautogui
+            import pyautogui  # noqa: E402
 
-            from ..mcp_manager import mcp_manager
+            from ..mcp_manager import mcp_manager  # noqa: E402
 
             action = args.get("action", "")
 
@@ -1004,9 +1035,9 @@ Please type your response below and press Enter:
                 x, y = args.get("x", 0), args.get("y", 0)
                 pid = int(args.get("pid", 0))
                 res = await mcp_manager.call_tool(
-                    "macos-use", 
-                    "macos-use_click_and_traverse", 
-                    {"pid": pid, "x": float(x), "y": float(y)}
+                    "macos-use",
+                    "macos-use_click_and_traverse",
+                    {"pid": pid, "x": float(x), "y": float(y)},
                 )
                 return self._format_mcp_result(res)
 
@@ -1014,28 +1045,30 @@ Please type your response below and press Enter:
                 text = args.get("text", "")
                 pid = int(args.get("pid", 0))
                 res = await mcp_manager.call_tool(
-                    "macos-use", 
-                    "macos-use_type_and_traverse", 
-                    {"pid": pid, "text": text}
+                    "macos-use", "macos-use_type_and_traverse", {"pid": pid, "text": text}
                 )
                 return self._format_mcp_result(res)
 
             elif action == "hotkey":
                 keys = args.get("keys", [])
                 pid = int(args.get("pid", 0))
-                
+
                 # Mapper for Swift SDK keys
                 modifiers = []
                 key_name = ""
-                
+
                 modifier_map = {
-                    "cmd": "Command", "command": "Command",
+                    "cmd": "Command",
+                    "command": "Command",
                     "shift": "Shift",
-                    "ctrl": "Control", "control": "Control",
-                    "opt": "Option", "option": "Option", "alt": "Option",
-                    "fn": "Function"
+                    "ctrl": "Control",
+                    "control": "Control",
+                    "opt": "Option",
+                    "option": "Option",
+                    "alt": "Option",
+                    "fn": "Function",
                 }
-                
+
                 for k in keys:
                     lower_k = k.lower()
                     if lower_k in modifier_map:
@@ -1043,27 +1076,31 @@ Please type your response below and press Enter:
                     else:
                         # Key Map
                         key_map = {
-                            "enter": "Return", "return": "Return",
-                            "esc": "Escape", "escape": "Escape",
-                            "space": "Space", 
+                            "enter": "Return",
+                            "return": "Return",
+                            "esc": "Escape",
+                            "escape": "Escape",
+                            "space": "Space",
                             "tab": "Tab",
-                            "up": "ArrowUp", "down": "ArrowDown",
-                            "left": "ArrowLeft", "right": "ArrowRight"
+                            "up": "ArrowUp",
+                            "down": "ArrowDown",
+                            "left": "ArrowLeft",
+                            "right": "ArrowRight",
                         }
-                        key_name = key_map.get(lower_k, k) # Default to raw key (e.g. "a", "1")
+                        key_name = key_map.get(lower_k, k)  # Default to raw key (e.g. "a", "1")
 
                 if not key_name and not modifiers:
-                     return {"success": False, "error": "Invalid hotkey definition"}
-                
+                    return {"success": False, "error": "Invalid hotkey definition"}
+
                 # If only modifiers, we can't really "press" a key in this API, needs a key
                 if not key_name:
                     # Fallback or error? Let's error for now
-                     return {"success": False, "error": "No non-modifier key specified"}
+                    return {"success": False, "error": "No non-modifier key specified"}
 
                 res = await mcp_manager.call_tool(
-                    "macos-use", 
-                    "macos-use_press_key_and_traverse", 
-                    {"pid": pid, "keyName": key_name, "modifierFlags": modifiers}
+                    "macos-use",
+                    "macos-use_press_key_and_traverse",
+                    {"pid": pid, "keyName": key_name, "modifierFlags": modifiers},
                 )
                 return self._format_mcp_result(res)
 
@@ -1074,15 +1111,13 @@ Please type your response below and press Enter:
 
             elif action == "search_app":
                 app_name = args.get("app_name", "") or args.get("text", "")
-                import subprocess
+                import subprocess  # noqa: E402
 
                 # 1. Try 'open -a'
                 try:
                     if app_name.lower() in ["calculator", "калькулятор"]:
                         app_name = "Calculator"
-                    subprocess.run(
-                        ["open", "-a", app_name], check=True, capture_output=True
-                    )
+                    subprocess.run(["open", "-a", app_name], check=True, capture_output=True)
                     return {"success": True, "output": f"Launched app: {app_name}"}
                 except Exception:
                     pass
@@ -1183,20 +1218,24 @@ Please type your response below and press Enter:
 
         Additionally collects verification artifacts (HTML, screenshot, small evaluations)
         and persists them to disk/notes/memory so that Grisha can verify actions."""
-        from ..mcp_manager import mcp_manager
-        from ..config import WORKSPACE_DIR, SCREENSHOTS_DIR
-        import base64
-        import time as _time
+        import base64  # noqa: E402
+        import time as _time  # noqa: E402
+
+        from ..config import SCREENSHOTS_DIR, WORKSPACE_DIR  # noqa: E402
+        from ..mcp_manager import mcp_manager  # noqa: E402
 
         action = args.get("action", "")
         step_id = args.get("step_id")
 
         # Helper: save artifact files and register in notes/memory
-        async def _save_artifacts(html_text: str = None, title_text: str = None, screenshot_b64: str = None):
+        async def _save_artifacts(
+            html_text: str = None, title_text: str = None, screenshot_b64: str = None
+        ):
             try:
-                from ..mcp_manager import mcp_manager
-                from ..logger import logger
-                from ..config import WORKSPACE_DIR, SCREENSHOTS_DIR
+                # from ..config import SCREENSHOTS_DIR, WORKSPACE_DIR  # noqa: E402
+                from ..logger import logger  # noqa: E402
+                # from ..mcp_manager import mcp_manager  # noqa: E402
+
                 ts = _time.strftime("%Y%m%d_%H%M%S")
                 artifacts = []
 
@@ -1217,7 +1256,7 @@ Please type your response below and press Enter:
 
                 # Create a note linking artifacts and include short HTML/title snippet and keyword checks
                 note_title = f"Grisha Artifact - Step {step_id} @ {ts}"
-                snippet = ''
+                snippet = ""
                 if title_text:
                     snippet += f"Title: {title_text}\n\n"
                 if html_text:
@@ -1226,13 +1265,18 @@ Please type your response below and press Enter:
                 # Keyword search in HTML snippet
                 detected = []
                 if html_text:
-                    keywords = ['phone', 'sms', 'verification', 'код', 'телефон']
+                    keywords = ["phone", "sms", "verification", "код", "телефон"]
                     low = html_text.lower()
                     for kw in keywords:
                         if kw in low:
                             detected.append(kw)
 
-                note_content = f"Artifacts for step {step_id} saved at {ts}.\n\nFiles:\n" + ("\n".join(artifacts) if artifacts else "(no binary files captured)") + "\n\n" + snippet
+                note_content = (
+                    f"Artifacts for step {step_id} saved at {ts}.\n\nFiles:\n"
+                    + ("\n".join(artifacts) if artifacts else "(no binary files captured)")
+                    + "\n\n"
+                    + snippet
+                )
                 if detected:
                     note_content += f"Detected keywords in HTML: {', '.join(detected)}\n"
 
@@ -1244,7 +1288,7 @@ Please type your response below and press Enter:
                             "title": note_title,
                             "content": note_content,
                             "category": "verification_artifact",
-                            "tags": ["grisha", f"step_{step_id}"] ,
+                            "tags": ["grisha", f"step_{step_id}"],
                         },
                     )
                     logger.info(f"[TETYANA] Created verification artifact note for step {step_id}")
@@ -1272,8 +1316,10 @@ Please type your response below and press Enter:
 
                 return True
             except Exception as e:
-                from ..logger import logger
+                from ..logger import logger  # noqa: E402
+
                 logger.warning(f"[TETYANA] _save_artifacts exception: {e}")
+
         if action == "navigate" or action == "open":
             res = await mcp_manager.call_tool(
                 "puppeteer", "puppeteer_navigate", {"url": args.get("url", "")}
@@ -1283,7 +1329,8 @@ Please type your response below and press Enter:
             try:
                 # small delay to allow navigation/rendering
                 await asyncio.sleep(1.5)
-                from ..logger import logger
+                from ..logger import logger  # noqa: E402
+
                 logger.info(f"[TETYANA] Collecting browser artifacts for step {step_id}...")
 
                 # Document title
@@ -1291,21 +1338,33 @@ Please type your response below and press Enter:
                     "puppeteer", "puppeteer_evaluate", {"script": "document.title"}
                 )
                 title_text = None
-                if hasattr(title_res, "content") and len(title_res.content) > 0 and hasattr(title_res.content[0], "text"):
+                if (
+                    hasattr(title_res, "content")
+                    and len(title_res.content) > 0
+                    and hasattr(title_res.content[0], "text")
+                ):
                     title_text = title_res.content[0].text
 
                 # Page HTML
                 html_res = await mcp_manager.call_tool(
-                    "puppeteer", "puppeteer_evaluate", {"script": "document.documentElement.outerHTML"}
+                    "puppeteer",
+                    "puppeteer_evaluate",
+                    {"script": "document.documentElement.outerHTML"},
                 )
                 html_text = None
-                if hasattr(html_res, "content") and len(html_res.content) > 0 and hasattr(html_res.content[0], "text"):
+                if (
+                    hasattr(html_res, "content")
+                    and len(html_res.content) > 0
+                    and hasattr(html_res.content[0], "text")
+                ):
                     # The evaluation may return a JSON wrapper, try to extract raw
                     html_text = html_res.content[0].text
 
                 # Screenshot (base64)
                 shot_res = await mcp_manager.call_tool(
-                    "puppeteer", "puppeteer_screenshot", {"name": f"grisha_step_{step_id}", "encoded": True}
+                    "puppeteer",
+                    "puppeteer_screenshot",
+                    {"name": f"grisha_step_{step_id}", "encoded": True},
                 )
                 screenshot_b64 = None
                 if hasattr(shot_res, "content"):
@@ -1326,9 +1385,11 @@ Please type your response below and press Enter:
                                 except Exception:
                                     pass
 
-                await _save_artifacts(html_text=html_text, title_text=title_text, screenshot_b64=screenshot_b64)
+                await _save_artifacts(
+                    html_text=html_text, title_text=title_text, screenshot_b64=screenshot_b64
+                )
             except Exception as e:
-                from ..logger import logger
+                from ..logger import logger  # noqa: E402
 
                 logger.warning(f"[TETYANA] Failed to collect browser artifacts: {e}")
 
@@ -1347,7 +1408,9 @@ Please type your response below and press Enter:
                     # small delay to allow navigation
                     await asyncio.sleep(1.0)
                     # reuse collection
-                    await self._browser_action({"action": "navigate", "url": args.get("url", ""), "step_id": step_id})
+                    await self._browser_action(
+                        {"action": "navigate", "url": args.get("url", ""), "step_id": step_id}
+                    )
                 except Exception:
                     pass
 
@@ -1380,8 +1443,8 @@ Please type your response below and press Enter:
 
     async def _filesystem_action(self, args: Dict[str, Any]) -> Dict[str, Any]:
         """Filesystem operations via MCP"""
-        from ..logger import logger
-        from ..mcp_manager import mcp_manager
+        from ..logger import logger  # noqa: E402
+        from ..mcp_manager import mcp_manager  # noqa: E402
 
         action = args.get("action", "")
         path = args.get("path", "")
@@ -1397,9 +1460,7 @@ Please type your response below and press Enter:
             logger.info(f"[TETYANA] Inferred FS action: {action} for path: {path}")
 
         if action == "read" or action == "read_file":
-            result = await mcp_manager.call_tool(
-                "filesystem", "read_file", {"path": path}
-            )
+            result = await mcp_manager.call_tool("filesystem", "read_file", {"path": path})
             shared_context.update_path(path, "read")
             return self._format_mcp_result(result)
         elif action == "write" or action == "write_file":
@@ -1410,18 +1471,12 @@ Please type your response below and press Enter:
             )
             shared_context.update_path(path, "write")
             return self._format_mcp_result(result)
-        elif (
-            action == "create_dir" or action == "mkdir" or action == "create_directory"
-        ):
-            result = await mcp_manager.call_tool(
-                "filesystem", "create_directory", {"path": path}
-            )
+        elif action == "create_dir" or action == "mkdir" or action == "create_directory":
+            result = await mcp_manager.call_tool("filesystem", "create_directory", {"path": path})
             shared_context.update_path(path, "create_directory")
             return self._format_mcp_result(result)
         elif action == "list" or action == "list_directory":
-            result = await mcp_manager.call_tool(
-                "filesystem", "list_directory", {"path": path}
-            )
+            result = await mcp_manager.call_tool("filesystem", "list_directory", {"path": path})
             shared_context.update_path(path, "access")
             return self._format_mcp_result(result)
         else:
@@ -1432,7 +1487,7 @@ Please type your response below and press Enter:
 
     async def _search_action(self, args: Dict[str, Any]) -> Dict[str, Any]:
         """Web search via Brave MCP"""
-        from ..mcp_manager import mcp_manager
+        from ..mcp_manager import mcp_manager  # noqa: E402
 
         query = args.get("query", "")
         # Tool name usually 'duckduckgo_search' or just 'search'
@@ -1443,7 +1498,7 @@ Please type your response below and press Enter:
 
     async def _github_action(self, args: Dict[str, Any]) -> Dict[str, Any]:
         """GitHub actions"""
-        from ..mcp_manager import mcp_manager
+        from ..mcp_manager import mcp_manager  # noqa: E402
 
         # Pass-through mostly
         mcp_tool = args.get("tool_name", "search_repositories")
@@ -1454,7 +1509,7 @@ Please type your response below and press Enter:
         return self._format_mcp_result(res)
 
     async def _applescript_action(self, args: Dict[str, Any]) -> Dict[str, Any]:
-        from ..mcp_manager import mcp_manager
+        from ..mcp_manager import mcp_manager  # noqa: E402
 
         action = args.get("action", "execute_script")
         if action == "execute_script":
@@ -1530,45 +1585,52 @@ Please type your response below and press Enter:
         error = kwargs.get("error", "")
 
         # Extract "essence" of description (first 5-7 words usually contain the verb and object)
-        import re
+        import re  # noqa: E402
+
         essence = desc
         if len(desc) > 60:
-             # Take start, cut at punctuation or reasonable length
-             match = re.search(r"^(.{10,50})[.;,]", desc)
-             if match:
-                 essence = match.group(1)
-             else:
-                 essence = desc[:50] + "..."
-        
+            # Take start, cut at punctuation or reasonable length
+            match = re.search(r"^(.{10,50})[.;,]", desc)
+            if match:
+                essence = match.group(1)
+            else:
+                essence = desc[:50] + "..."
+
         # Translate commonly used technical prefixes if English
         essence = essence.lower()
-        if essence.startswith("create"): essence = essence.replace("create", "Створюю", 1)
-        elif essence.startswith("update"): essence = essence.replace("update", "Оновлюю", 1)
-        elif essence.startswith("check"): essence = essence.replace("check", "Перевіряю", 1)
-        elif essence.startswith("install"): essence = essence.replace("install", "Встановлюю", 1)
-        elif essence.startswith("run"): essence = essence.replace("run", "Запускаю", 1)
-        elif essence.startswith("execute"): essence = essence.replace("execute", "Виконую", 1)
+        if essence.startswith("create"):
+            essence = essence.replace("create", "Створюю", 1)
+        elif essence.startswith("update"):
+            essence = essence.replace("update", "Оновлюю", 1)
+        elif essence.startswith("check"):
+            essence = essence.replace("check", "Перевіряю", 1)
+        elif essence.startswith("install"):
+            essence = essence.replace("install", "Встановлюю", 1)
+        elif essence.startswith("run"):
+            essence = essence.replace("run", "Запускаю", 1)
+        elif essence.startswith("execute"):
+            essence = essence.replace("execute", "Виконую", 1)
 
         # Construct message based on state
         if action == "completed":
-             return f"Крок {step_id}: {essence} — виконано."
+            return f"Крок {step_id}: {essence} — виконано."
         elif action == "failed":
-             err_essence = "Помилка."
-             if error:
-                 # Clean error message
-                 err_clean = str(error).split('\n')[0][:50]
-                 err_essence = f"Помилка: {err_clean}"
-             return f"У кроці {step_id} не вдалося {essence}. {err_essence}"
+            err_essence = "Помилка."
+            if error:
+                # Clean error message
+                err_clean = str(error).split("\n")[0][:50]
+                err_essence = f"Помилка: {err_clean}"
+            return f"У кроці {step_id} не вдалося {essence}. {err_essence}"
         elif action == "starting":
-             return f"Розпочинаю крок {step_id}: {essence}."
+            return f"Розпочинаю крок {step_id}: {essence}."
         elif action == "asking_verification":
-             return f"Крок {step_id} завершено. Гріша, верифікуй."
-        
+            return f"Крок {step_id} завершено. Гріша, верифікуй."
+
         return f"Статус кроку {step_id}: {action}."
 
     def _parse_response(self, content: str) -> Dict[str, Any]:
         """Parse JSON response from LLM"""
-        import json
+        import json  # noqa: E402
 
         try:
             start = content.find("{")

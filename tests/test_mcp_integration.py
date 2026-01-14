@@ -88,18 +88,14 @@ def test_mcp_servers_connect_and_list_tools():
                 if missing_env:
                     pytest.fail(
                         f"Missing required env vars for {name}: {sorted(set(missing_env))}. "
-                        f"Add them to ~/.config/atlastrinity/.env or export them in your shell."
+                        "Add them to ~/.config/atlastrinity/.env or export them in your shell."
                     )
 
-                session = await asyncio.wait_for(
-                    mgr.get_session(name), timeout=timeout + 5.0
-                )
+                session = await asyncio.wait_for(mgr.get_session(name), timeout=timeout + 5.0)
                 if session is None:
                     pytest.fail(f"Could not connect to MCP server: {name}")
 
-                tools = await asyncio.wait_for(
-                    mgr.list_tools(name), timeout=timeout + 10.0
-                )
+                tools = await asyncio.wait_for(mgr.list_tools(name), timeout=timeout + 10.0)
                 assert isinstance(
                     tools, list
                 ), f"Expected list of tools from {name}, got {type(tools).__name__}"

@@ -15,7 +15,7 @@ sys.modules["ukrainian_tts.tts"] = MagicMock()
 # Add src path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "src")))
 
-from brain.orchestrator import SystemState, Trinity
+from brain.orchestrator import SystemState, Trinity  # noqa: E402
 
 
 # Mock Agents
@@ -74,9 +74,7 @@ async def test_handoff_crash():
 
         # Check if error was logged in state
         logs = trinity.state.get("logs", [])
-        crash_log = next(
-            (l for l in logs if "Verification crashed" in l["message"]), None
-        )
+        crash_log = next((l for l in logs if "Verification crashed" in l["message"]), None)
 
         if crash_log:
             print("SUCCESS: Orchestrator caught the crash and logged it.")

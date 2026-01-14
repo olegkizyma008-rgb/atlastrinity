@@ -7,9 +7,7 @@ from src.brain.mcp_manager import MCPManager
 
 async def test_restart_retry_success():
     manager = MCPManager()
-    manager.config = {
-        "mcpServers": {"foo": {"command": "python3", "args": ["-c", "pass"]}}
-    }
+    manager.config = {"mcpServers": {"foo": {"command": "python3", "args": ["-c", "pass"]}}}
     calls = {"n": 0}
 
     async def fake_connect(server_name, cfg):
@@ -25,9 +23,7 @@ async def test_restart_retry_success():
 
 async def test_restart_retry_fail():
     manager = MCPManager()
-    manager.config = {
-        "mcpServers": {"bar": {"command": "python3", "args": ["-c", "pass"]}}
-    }
+    manager.config = {"mcpServers": {"bar": {"command": "python3", "args": ["-c", "pass"]}}}
     manager._max_restart_attempts = 3
 
     async def always_fail(server_name, cfg):

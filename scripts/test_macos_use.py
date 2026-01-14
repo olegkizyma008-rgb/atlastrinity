@@ -1,7 +1,7 @@
-
-import subprocess
 import json
+import subprocess
 import sys
+
 
 def run_mcp_command(binary_path, method, params, request_id=1):
     process = subprocess.Popen(
@@ -9,7 +9,7 @@ def run_mcp_command(binary_path, method, params, request_id=1):
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=True
+        text=True,
     )
 
     # 1. Initialize
@@ -19,13 +19,13 @@ def run_mcp_command(binary_path, method, params, request_id=1):
         "params": {
             "protocolVersion": "2024-11-05",
             "capabilities": {},
-            "clientInfo": {"name": "test-client", "version": "1.0"}
+            "clientInfo": {"name": "test-client", "version": "1.0"},
         },
-        "id": request_id
+        "id": request_id,
     }
     process.stdin.write(json.dumps(init_req) + "\n")
     process.stdin.flush()
-    
+
     # Read init response
     line = process.stdout.readline()
     # print(f"Init Response: {line}", file=sys.stderr)
@@ -34,11 +34,8 @@ def run_mcp_command(binary_path, method, params, request_id=1):
     tool_req = {
         "jsonrpc": "2.0",
         "method": "tools/call",
-        "params": {
-            "name": method,
-            "arguments": params
-        },
-        "id": request_id + 1
+        "params": {"name": method, "arguments": params},
+        "id": request_id + 1,
     }
     process.stdin.write(json.dumps(tool_req) + "\n")
     process.stdin.flush()
@@ -48,6 +45,7 @@ def run_mcp_command(binary_path, method, params, request_id=1):
     print(line)
 
     process.terminate()
+
 
 if __name__ == "__main__":
     binary = "/Users/dev/Documents/GitHub/atlastrinity/vendor/mcp-server-macos-use/.build/release/mcp-server-macos-use"

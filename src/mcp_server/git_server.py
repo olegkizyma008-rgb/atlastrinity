@@ -7,9 +7,7 @@ from mcp.server import FastMCP
 server = FastMCP("git")
 
 
-def _run_git(
-    args: List[str], cwd: Optional[str] = None, timeout_s: float = 20.0
-) -> Dict[str, Any]:
+def _run_git(args: List[str], cwd: Optional[str] = None, timeout_s: float = 20.0) -> Dict[str, Any]:
     try:
         p = subprocess.run(
             ["git", *args],
@@ -54,9 +52,7 @@ def git_repo_root(path: str = ".") -> Dict[str, Any]:
 
 
 @server.tool()
-def git_status(
-    path: str = ".", porcelain: bool = True, timeout_s: float = 20.0
-) -> Dict[str, Any]:
+def git_status(path: str = ".", porcelain: bool = True, timeout_s: float = 20.0) -> Dict[str, Any]:
     """
     Get the status of the git repository.
 
@@ -75,9 +71,7 @@ def git_status(
 
 
 @server.tool()
-def git_diff(
-    path: str = ".", staged: bool = False, timeout_s: float = 20.0
-) -> Dict[str, Any]:
+def git_diff(path: str = ".", staged: bool = False, timeout_s: float = 20.0) -> Dict[str, Any]:
     """
     Get the diff of the git repository.
 
@@ -96,9 +90,7 @@ def git_diff(
 
 
 @server.tool()
-def git_log(
-    path: str = ".", limit: int = 20, timeout_s: float = 20.0
-) -> Dict[str, Any]:
+def git_log(path: str = ".", limit: int = 20, timeout_s: float = 20.0) -> Dict[str, Any]:
     """
     Get the commit log of the git repository.
 
@@ -165,7 +157,7 @@ def git_current_branch(path: str = ".", timeout_s: float = 20.0) -> Dict[str, An
         path: Path within the repository (default: current directory)
         timeout_s: Command timeout in seconds (default: 20.0)
     """
-    args = ["rev-parse", "--abbrev-ref", "HEAD"]
+    args = ["rev-parse", "--abbrev-re", "HEAD"]
     root = _repo_root(cwd=path)
     if not root:
         return {"error": "not a git repository"}

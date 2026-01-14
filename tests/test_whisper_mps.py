@@ -18,8 +18,8 @@ import torch
 # Add project to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.brain.config_loader import config
-from src.brain.voice.stt import WhisperSTT
+from src.brain.config_loader import config  # noqa: E402
+from src.brain.voice.stt import WhisperSTT  # noqa: E402
 
 
 def check_mps_availability():
@@ -70,7 +70,7 @@ def test_whisper_device(device_name: str):
         load_start = time.time()
 
         # Trigger model loading (WhisperSTT uses async get_model)
-        import asyncio as _asyncio
+        import asyncio as _asyncio  # noqa: E402
 
         _model = _asyncio.run(stt.get_model())
 
@@ -83,7 +83,7 @@ def test_whisper_device(device_name: str):
             print(f"  Фактичний device моделі: {actual_device}")
 
         total_time = time.time() - start
-        print(f"\n✅ ТЕСТ ПРОЙДЕНО!")
+        print("\n✅ ТЕСТ ПРОЙДЕНО!")
         print(f"   Загальний час: {total_time:.2f}s")
 
         # Перевіряємо успіх через assert (pytest-style)
@@ -91,7 +91,7 @@ def test_whisper_device(device_name: str):
 
     except Exception as e:
         print(f"\n❌ ПОМИЛКА: {e}")
-        import traceback
+        import traceback  # noqa: E402
 
         traceback.print_exc()
 
@@ -105,7 +105,7 @@ def main():
 
     # Читаємо конфіг
     stt_config = config.get("voice.stt", {})
-    print(f"\n📋 Config:")
+    print("\n📋 Config:")
     print(f"   Model: {stt_config.get('model', 'base')}")
     print(f"   Language: {stt_config.get('language', 'uk')}")
     print(f"   Device: {stt_config.get('device', 'cpu')}")
@@ -132,14 +132,12 @@ def main():
 
             print(f"\nCPU:  {cpu_total:.2f}s")
             print(f"MPS:  {mps_total:.2f}s")
-            print(
-                f"\n{'⚡ MPS швидший' if speedup > 1 else '🐌 CPU швидший'}: {speedup:.2f}x"
-            )
+            print(f"\n{'⚡ MPS швидший' if speedup > 1 else '🐌 CPU швидший'}: {speedup:.2f}x")
 
             if speedup > 1:
-                print(f"\n✅ РЕКОМЕНДАЦІЯ: Використовуйте device: 'mps' в config.yaml")
+                print("\n✅ РЕКОМЕНДАЦІЯ: Використовуйте device: 'mps' в config.yaml")
             else:
-                print(f"\n⚠️  РЕКОМЕНДАЦІЯ: device: 'cpu' може бути кращим варіантом")
+                print("\n⚠️  РЕКОМЕНДАЦІЯ: device: 'cpu' може бути кращим варіантом")
     else:
         print("\n⚠️  MPS недоступний - пропускаємо тест")
         print("   Використовуйте device: 'cpu' в config.yaml")

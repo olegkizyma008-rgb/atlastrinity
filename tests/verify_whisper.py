@@ -37,9 +37,7 @@ def main():
     project_config = PROJECT_ROOT / "config.yaml"
     global_config = Path.home() / ".config" / "atlastrinity" / "config.yaml"
 
-    print_check(
-        "Project config.yaml існує", project_config.exists(), str(project_config)
-    )
+    print_check("Project config.yaml існує", project_config.exists(), str(project_config))
 
     print_check("Global config.yaml існує", global_config.exists(), str(global_config))
 
@@ -78,7 +76,7 @@ def main():
     if whisper_dir.exists():
         models = list(whisper_dir.glob("*.pt"))
         print_check(
-            f"Whisper моделі завантажені",
+            "Whisper моделі завантажені",
             len(models) > 0,
             f"Знайдено {len(models)} моделей: {[m.name for m in models]}",
         )
@@ -87,7 +85,7 @@ def main():
     print_header("3. Перевірка Python модулів")
 
     try:
-        from src.brain.voice.stt import WhisperSTT
+        from src.brain.voice.stt import WhisperSTT  # noqa: E402
 
         print_check("WhisperSTT import", True, "src.brain.voice.stt")
     except Exception as e:
@@ -95,7 +93,7 @@ def main():
         return 1
 
     try:
-        from src.brain.config_loader import config
+        from src.brain.config_loader import config  # noqa: E402
 
         print_check("config_loader import", True, "src.brain.config_loader")
     except Exception as e:
@@ -103,7 +101,7 @@ def main():
         return 1
 
     try:
-        from src.mcp.whisper_server import server, stt
+        from src.mcp.whisper_server import server, stt  # noqa: E402
 
         print_check("MCP Whisper Server import", True, "src.mcp.whisper_server")
     except Exception as e:
@@ -207,14 +205,16 @@ def main():
     print_header("7. Перевірка production_setup.py")
 
     try:
-        from src.brain.production_setup import (copy_config_if_needed,
-                                                get_resources_path,
-                                                is_production)
+        from src.brain.production_setup import (  # noqa: E402
+            copy_config_if_needed,
+            get_resources_path,
+            is_production,
+        )
 
         print_check("production_setup imports", True)
 
         # Перевірка що config.yaml в списку файлів для копіювання
-        import inspect
+        import inspect  # noqa: E402
 
         source = inspect.getsource(copy_config_if_needed)
         has_config_yaml = "config.yaml" in source
@@ -236,16 +236,14 @@ def main():
         source = setup_dev.read_text()
         has_whisper_dir = "whisper" in source and "WHISPER_DIR" in source
 
-        print_check(
-            "WHISPER_DIR визначено", has_whisper_dir, "models/whisper створюється"
-        )
+        print_check("WHISPER_DIR визначено", has_whisper_dir, "models/whisper створюється")
 
     # 9. package.json перевірка
     print_header("9. Перевірка package.json (build)")
 
     package_json = PROJECT_ROOT / "package.json"
     if package_json.exists():
-        import json
+        import json  # noqa: E402
 
         pkg = json.loads(package_json.read_text())
 

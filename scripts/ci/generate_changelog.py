@@ -91,11 +91,7 @@ def categorize_commits(
             categories["docs"].append(commit)
         elif subject.startswith("test") or "tests" in subject:
             categories["tests"].append(commit)
-        elif (
-            subject.startswith("ci")
-            or "workflow" in subject
-            or "github actions" in subject
-        ):
+        elif subject.startswith("ci") or "workflow" in subject or "github actions" in subject:
             categories["ci"].append(commit)
         elif subject.startswith("refactor") or "cleanup" in subject:
             categories["refactor"].append(commit)
@@ -122,7 +118,7 @@ def generate_changelog(version: str = None) -> str:
     if version:
         changelog.append(f"# {version}\n")
     else:
-        changelog.append(f"# Changelog\n")
+        changelog.append("# Changelog\n")
 
     changelog.append(f"**Release Date:** {datetime.now().strftime('%Y-%m-%d')}\n")
 

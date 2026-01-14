@@ -63,9 +63,7 @@ class SetupProgress:
 ProgressCallback = Callable[[SetupProgress], None]
 
 
-def _run_command(
-    cmd: list, timeout: int = 300, capture: bool = True
-) -> tuple[int, str, str]:
+def _run_command(cmd: list, timeout: int = 300, capture: bool = True) -> tuple[int, str, str]:
     """Execute command and return (returncode, stdout, stderr)"""
     try:
         result = subprocess.run(cmd, capture_output=capture, text=True, timeout=timeout)
@@ -79,9 +77,7 @@ def _run_command(
 def _run_command_async(cmd: str, timeout: int = 600) -> tuple[int, str, str]:
     """Execute shell command with pipe handling"""
     try:
-        result = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, timeout=timeout
-        )
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
         return result.returncode, result.stdout, result.stderr
     except Exception as e:
         return -1, "", str(e)
@@ -190,9 +186,7 @@ class FirstRunInstaller:
             import tempfile
 
             test_path = Path(tempfile.gettempdir()) / "atlastrinity_perm_test.png"
-            code, _, _ = _run_command(
-                ["screencapture", "-x", str(test_path)], timeout=5
-            )
+            code, _, _ = _run_command(["screencapture", "-x", str(test_path)], timeout=5)
             if test_path.exists():
                 test_path.unlink()
                 permissions["screen_recording"] = True
@@ -330,9 +324,7 @@ class FirstRunInstaller:
 
     def install_redis(self) -> bool:
         """Install Redis"""
-        return self._install_brew_package(
-            SetupStep.INSTALL_REDIS, "redis", check_cmd="redis-cli"
-        )
+        return self._install_brew_package(SetupStep.INSTALL_REDIS, "redis", check_cmd="redis-cli")
 
     def install_postgres(self) -> bool:
         """Install PostgreSQL"""
@@ -353,9 +345,7 @@ class FirstRunInstaller:
             # Check if already running
             code, out, _ = _run_command(["brew", "services", "info", service, "--json"])
             if '"running":true' in out.replace(" ", "") or '"running": true' in out:
-                self._report(
-                    SetupStep.START_SERVICES, progress, f"{service} вже запущено"
-                )
+                self._report(SetupStep.START_SERVICES, progress, f"{service} вже запущено")
                 continue
 
             # Start service
@@ -511,9 +501,7 @@ class FirstRunInstaller:
             self._report(SetupStep.DOWNLOAD_STT, 1.0, "STT моделі вже завантажені ✓")
             return True
 
-        self._report(
-            SetupStep.DOWNLOAD_STT, 0.2, "Завантаження Faster-Whisper large-v3-turbo..."
-        )
+        self._report(SetupStep.DOWNLOAD_STT, 0.2, "Завантаження Faster-Whisper large-v3-turbo...")
 
         try:
             WHISPER_DIR.mkdir(parents=True, exist_ok=True)
@@ -556,9 +544,7 @@ class FirstRunInstaller:
 
         # 2. Permissions check (informational)
         permissions = self.check_permissions()
-        if not permissions.get("accessibility") or not permissions.get(
-            "screen_recording"
-        ):
+        if not permissions.get("accessibility") or not permissions.get("screen_recording"):
             print("\n⚠️  Відкрийте System Settings > Privacy & Security")
             print("   та надайте дозволи для AtlasTrinity:")
             print("   - Accessibility")

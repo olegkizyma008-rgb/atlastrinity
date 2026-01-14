@@ -1,5 +1,6 @@
 import asyncio
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -9,10 +10,8 @@ env_path = Path(__file__).parent / ".env"
 load_dotenv(env_path)
 
 # Add src to path
-import sys
-
 sys.path.append(os.path.join(os.path.dirname(__file__)))
-from src.brain.agents.atlas import Atlas
+from src.brain.agents.atlas import Atlas  # noqa: E402
 
 
 async def test_copilot():
@@ -30,7 +29,7 @@ async def test_copilot():
         print("\nSUCCESS: Copilot is working.")
     except Exception as e:
         print(f"\nERROR: Failed to connect to Copilot:\n{e}")
-        import traceback
+        import traceback  # noqa: E402
 
         traceback.print_exc()
 

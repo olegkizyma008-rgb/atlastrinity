@@ -41,9 +41,7 @@ class LongTermMemory:
 
     def __init__(self):
         if not CHROMADB_AVAILABLE:
-            logger.warning(
-                "[MEMORY] ChromaDB not installed. Running without long-term memory."
-            )
+            logger.warning("[MEMORY] ChromaDB not installed. Running without long-term memory.")
             self.available = False
             return
 
@@ -104,18 +102,14 @@ class LongTermMemory:
 
             # Metadata for filtering
             metadata = {
-                "error_type": (
-                    type(error).__name__ if hasattr(error, "__name__") else "string"
-                ),
+                "error_type": (type(error).__name__ if hasattr(error, "__name__") else "string"),
                 "timestamp": datetime.now().isoformat(),
                 "tool": context.get("tool", ""),
                 "step_id": str(context.get("step_id", "")),
                 "success": context.get("success", False),
             }
 
-            self.lessons.upsert(
-                ids=[doc_id], documents=[document], metadatas=[metadata]
-            )
+            self.lessons.upsert(ids=[doc_id], documents=[document], metadatas=[metadata])
 
             logger.info(f"[MEMORY] Stored lesson: {doc_id}")
             return True
@@ -152,9 +146,7 @@ class LongTermMemory:
                 "steps_count": len(plan_steps),
             }
 
-            self.strategies.upsert(
-                ids=[doc_id], documents=[document], metadatas=[metadata]
-            )
+            self.strategies.upsert(ids=[doc_id], documents=[document], metadatas=[metadata])
 
             logger.info(f"[MEMORY] Stored strategy: {doc_id} (success={success})")
             return True
@@ -163,9 +155,7 @@ class LongTermMemory:
             logger.error(f"[MEMORY] Failed to store strategy: {e}")
             return False
 
-    def recall_similar_errors(
-        self, error: str, n_results: int = 3
-    ) -> List[Dict[str, Any]]:
+    def recall_similar_errors(self, error: str, n_results: int = 3) -> List[Dict[str, Any]]:
         """
         Find similar past errors and their solutions.
 
@@ -193,14 +183,10 @@ class LongTermMemory:
                         {
                             "document": doc,
                             "metadata": (
-                                results["metadatas"][0][i]
-                                if results["metadatas"]
-                                else {}
+                                results["metadatas"][0][i] if results["metadatas"] else {}
                             ),
                             "distance": (
-                                results["distances"][0][i]
-                                if results["distances"]
-                                else 1.0
+                                results["distances"][0][i] if results["distances"] else 1.0
                             ),
                         }
                     )
@@ -246,14 +232,10 @@ class LongTermMemory:
                         {
                             "document": doc,
                             "metadata": (
-                                results["metadatas"][0][i]
-                                if results["metadatas"]
-                                else {}
+                                results["metadatas"][0][i] if results["metadatas"] else {}
                             ),
                             "distance": (
-                                results["distances"][0][i]
-                                if results["distances"]
-                                else 1.0
+                                results["distances"][0][i] if results["distances"] else 1.0
                             ),
                         }
                     )
@@ -265,9 +247,7 @@ class LongTermMemory:
             logger.error(f"[MEMORY] Failed to recall tasks: {e}")
             return []
 
-    def add_knowledge_node(
-        self, node_id: str, text: str, metadata: Dict[str, Any]
-    ) -> bool:
+    def add_knowledge_node(self, node_id: str, text: str, metadata: Dict[str, Any]) -> bool:
         """Add a knowledge graph node to vector store."""
         if not self.available:
             return False
@@ -309,11 +289,7 @@ class LongTermMemory:
         new_lessons = 0
 
         # Group errors by similarity
-        errors = [
-            log
-            for log in logs
-            if log.get("type") == "error" or log.get("success") is False
-        ]
+        errors = [log for log in logs if log.get("type") == "error" or log.get("success") is False]
 
         for error_log in errors:
             # Check if we already have this lesson
@@ -331,9 +307,7 @@ class LongTermMemory:
                 )
                 new_lessons += 1
 
-        logger.info(
-            f"[MEMORY] Consolidated {new_lessons} new lessons from {len(logs)} logs"
-        )
+        logger.info(f"[MEMORY] Consolidated {new_lessons} new lessons from {len(logs)} logs")
         return new_lessons
 
 

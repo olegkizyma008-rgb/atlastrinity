@@ -41,9 +41,7 @@ def _search_ddg(query: str, max_results: int, timeout_s: float) -> List[Dict[str
 
 
 @server.tool()
-def duckduckgo_search(
-    query: str, max_results: int = 5, timeout_s: float = 10.0
-) -> Dict[str, Any]:
+def duckduckgo_search(query: str, max_results: int = 5, timeout_s: float = 10.0) -> Dict[str, Any]:
     """
     Perform a web search using DuckDuckGo.
 
@@ -65,9 +63,7 @@ def duckduckgo_search(
         if timeout_f <= 0:
             return {"error": "timeout_s must be > 0"}
 
-        results = _search_ddg(
-            query=query.strip(), max_results=max_results_i, timeout_s=timeout_f
-        )
+        results = _search_ddg(query=query.strip(), max_results=max_results_i, timeout_s=timeout_f)
         return {"success": True, "query": query.strip(), "results": results}
     except Exception as e:
         return {"error": str(e)}

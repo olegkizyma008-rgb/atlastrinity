@@ -1,5 +1,6 @@
-import pytest
 import asyncio
+
+import pytest
 
 from brain.agents.tetyana import Tetyana
 from brain.mcp_manager import mcp_manager
@@ -10,12 +11,16 @@ async def test_tetyana_reads_grisha_note(tmp_path):
     # Create a note as Grisha would
     title = "Test Grisha Note for Tetyana"
     content = "This is a test rejection note from Grisha for step 777."
-    res = await mcp_manager.call_tool("notes", "create_note", {
-        "title": title,
-        "content": content,
-        "category": "verification_report",
-        "tags": ["grisha", "step_777"],
-    })
+    res = await mcp_manager.call_tool(
+        "notes",
+        "create_note",
+        {
+            "title": title,
+            "content": content,
+            "category": "verification_report",
+            "tags": ["grisha", "step_777"],
+        },
+    )
     assert res is not None
 
     tet = Tetyana(model_name="grok-code-fast-1")

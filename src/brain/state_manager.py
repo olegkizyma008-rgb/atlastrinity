@@ -32,9 +32,7 @@ class StateManager:
     - Session recovery after restart
     """
 
-    def __init__(
-        self, host: str = "localhost", port: int = 6379, prefix: str = "atlastrinity"
-    ):
+    def __init__(self, host: str = "localhost", port: int = 6379, prefix: str = "atlastrinity"):
 
         self.prefix = prefix
         self.available = False
@@ -109,9 +107,7 @@ class StateManager:
 
         return None
 
-    def checkpoint(
-        self, session_id: str, step_id: int, step_result: Dict[str, Any]
-    ) -> bool:
+    def checkpoint(self, session_id: str, step_id: int, step_result: Dict[str, Any]) -> bool:
         """
         Save checkpoint for a specific step.
 

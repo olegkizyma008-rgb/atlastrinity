@@ -12,8 +12,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.brain.agents.atlas import Atlas, TaskPlan
-from src.brain.context import shared_context
+from src.brain.agents.atlas import Atlas, TaskPlan  # noqa: E402
+from src.brain.context import shared_context  # noqa: E402
 
 
 class TestAtlasCore:
@@ -161,7 +161,7 @@ class TestPerformance:
         """Test JSON parsing is fast"""
         atlas = Atlas()
 
-        import time
+        import time  # noqa: E402
 
         large_json = '{"data": ' + str(list(range(1000))) + "}"
 

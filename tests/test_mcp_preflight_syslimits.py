@@ -18,9 +18,7 @@ def test_check_system_limits_low(monkeypatch):
         )
 
     issues = check_system_limits()
-    assert any("Process limit per user is low" in s for s in issues) or isinstance(
-        issues, list
-    )
+    assert any("Process limit per user is low" in s for s in issues) or isinstance(issues, list)
 
 
 def test_check_system_limits_sysctl(monkeypatch):

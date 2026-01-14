@@ -244,9 +244,7 @@ def scan_mcp_config_for_package_issues(config_path: Path) -> List[str]:
                                 f"{name}: python module {module} not importable (command={cmd} -m)"
                             )
                     except Exception:
-                        issues.append(
-                            f"{name}: could not parse -m module (command={cmd})"
-                        )
+                        issues.append(f"{name}: could not parse -m module (command={cmd})")
                 # -c '<code>'
                 if "-c" in args:
                     try:
@@ -259,9 +257,7 @@ def scan_mcp_config_for_package_issues(config_path: Path) -> List[str]:
                                     f"{name}: python module {m} not importable (command={cmd} -c)"
                                 )
                     except Exception:
-                        issues.append(
-                            f"{name}: could not parse -c code (command={cmd})"
-                        )
+                        issues.append(f"{name}: could not parse -c code (command={cmd})")
     except Exception as e:
         issues.append(f"Could not read/scan MCP config: {e}")
     return issues

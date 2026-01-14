@@ -79,9 +79,7 @@ def check_python_version():
         return True
     else:
         print_warning(f"Поточна версія Python: {current_version}")
-        print_info(
-            f"Рекомендовано використовувати {REQUIRED_PYTHON} для повної сумісності."
-        )
+        print_info(f"Рекомендовано використовувати {REQUIRED_PYTHON} для повної сумісності.")
         return True  # Дозволяємо продовжити, але з попередженням
 
 
@@ -107,37 +105,31 @@ def check_system_tools():
         if path:
             try:
                 if tool == "swift":
-                    version = (
-                        subprocess.check_output([tool, "--version"])
-                        .decode()
-                        .splitlines()[0]
-                    )
+                    version = subprocess.check_output([tool, "--version"]).decode().splitlines()[0]
                 elif tool == "vibe":
                     # Vibe might not support --version or behave differently, try standard
                     try:
-                        version = subprocess.check_output([tool, "--version"], timeout=2).decode().strip()
-                    except:
+                        version = (
+                            subprocess.check_output([tool, "--version"], timeout=2).decode().strip()
+                        )
+                    except Exception:
                         version = "detected"
                 else:
-                    version = (
-                        subprocess.check_output([tool, "--version"]).decode().strip()
-                    )
+                    version = subprocess.check_output([tool, "--version"]).decode().strip()
                 print_success(f"{tool} знайдено ({version})")
-            except:
+            except Exception:
                 print_success(f"{tool} знайдено")
         else:
             if tool == "vibe":
-                 print_warning("Vibe CLI не знайдено! (Потрібен для coding tasks)")
+                print_warning("Vibe CLI не знайдено! (Потрібен для coding tasks)")
             else:
-                 print_warning(f"{tool} НЕ знайдено")
+                print_warning(f"{tool} НЕ знайдено")
             missing.append(tool)
 
     if "bun" in missing:
         print_info("Bun не знайдено. Встановлення Bun...")
         try:
-            subprocess.run(
-                "curl -fsSL https://bun.sh/install | bash", shell=True, check=True
-            )
+            subprocess.run("curl -fsSL https://bun.sh/install | bash", shell=True, check=True)
             # Add to PATH for current session
             bun_bin = Path.home() / ".bun" / "bin"
             os.environ["PATH"] += os.pathsep + str(bun_bin)
@@ -192,9 +184,7 @@ def ensure_database():
                         print_warning(f"Не вдалося створити роль 'dev': {e}")
                         print_info("Створіть роль вручну: createuser -s dev")
             except Exception:
-                print_info(
-                    "Не вдалось перевірити роль 'dev' (psql може бути недоступен)."
-                )
+                print_info("Не вдалось перевірити роль 'dev' (psql може бути недоступен).")
 
             create_cmd = ["createdb", "-U", "dev", db_name]
             subprocess.run(create_cmd, check=True)
@@ -216,9 +206,7 @@ def ensure_database():
 
     except Exception as e:
         print_warning(f"Помилка при налаштуванні БД: {e}")
-        print_info(
-            "Переконайтесь, що PostgreSQL запущений і користувач 'dev' має права superuser."
-        )
+        print_info("Переконайтесь, що PostgreSQL запущений і користувач 'dev' має права superuser.")
 
 
 def _brew_formula_installed(formula: str) -> bool:
@@ -307,21 +295,15 @@ def install_brew_deps():
             print_success(f"{cask} встановлено")
         except subprocess.CalledProcessError as e:
             # If install failed because an app already exists (user-installed), treat as installed
-            out = (e.stdout or b"" if hasattr(e, "stdout") else b"").decode(
-                errors="ignore"
-            )
-            err = (e.stderr or b"" if hasattr(e, "stderr") else b"").decode(
-                errors="ignore"
-            )
+            out = (e.stdout or b"" if hasattr(e, "stdout") else b"").decode(errors="ignore")
+            err = (e.stderr or b"" if hasattr(e, "stderr") else b"").decode(errors="ignore")
             combined = out + "\n" + err
             if (
                 "already an App" in combined
                 or "There is already an App" in combined
                 or "installed to" in combined
             ):
-                print_warning(
-                    f"{cask}: додаток вже присутній (пропускаємо інсталяцію)."
-                )
+                print_warning(f"{cask}: додаток вже присутній (пропускаємо інсталяцію).")
             else:
                 print_warning(f"Не вдалося встановити {cask}: {e}")
 
@@ -333,9 +315,7 @@ def install_brew_deps():
         try:
             # Ensure formula installed first for formula-backed services
             if not _brew_formula_installed(service):
-                print_info(
-                    f"Формула {service} не встановлена — намагаємось встановити..."
-                )
+                print_info(f"Формула {service} не встановлена — намагаємось встановити...")
                 try:
                     subprocess.run(["brew", "install", service], check=True)
                     print_success(f"{service} встановлено")
@@ -373,13 +353,9 @@ def install_brew_deps():
             if result.returncode == 0:
                 print_success("Docker Desktop запущено")
             else:
-                print_warning(
-                    "Docker Desktop встановлено, але не запущено. Запустіть вручну."
-                )
-        except:
-            print_warning(
-                "Docker Desktop не відповідає. Переконайтесь що він запущений."
-            )
+                print_warning("Docker Desktop встановлено, але не запущено. Запустіть вручну.")
+        except Exception:
+            print_warning("Docker Desktop не відповідає. Переконайтесь що він запущений.")
 
     return True
 
@@ -436,7 +412,9 @@ def verify_mcp_package_versions():
     sys.path.append(str(PROJECT_ROOT))
     try:
         from src.brain.mcp_preflight import (
-            check_system_limits, scan_mcp_config_for_package_issues)
+            check_system_limits,
+            scan_mcp_config_for_package_issues,
+        )  # noqa: E402
     except ImportError:
         print_warning("Could not import mcp_preflight. Skipping pre-check.")
         return []
@@ -464,12 +442,8 @@ def install_deps():
     req_file = PROJECT_ROOT / "requirements.txt"
     if req_file.exists():
         print_info("PIP install -r requirements.txt...")
-        subprocess.run(
-            [venv_python, "-m", "pip", "install", "-U", "pip"], capture_output=True
-        )
-        subprocess.run(
-            [venv_python, "-m", "pip", "install", "-r", str(req_file)], check=True
-        )
+        subprocess.run([venv_python, "-m", "pip", "install", "-U", "pip"], capture_output=True)
+        subprocess.run([venv_python, "-m", "pip", "install", "-r", str(req_file)], check=True)
         # STT deps
         subprocess.run(
             [
@@ -502,9 +476,7 @@ def install_deps():
     # 2. NPM & MCP
     if shutil.which("npm"):
         print_info("NPM install & MCP packages...")
-        subprocess.run(
-            ["npm", "install"], cwd=PROJECT_ROOT, capture_output=True, check=True
-        )
+        subprocess.run(["npm", "install"], cwd=PROJECT_ROOT, capture_output=True, check=True)
 
         mcp_packages = [
             "@modelcontextprotocol/server-slack",
@@ -556,7 +528,7 @@ def sync_configs():
         # Перевірка та оновлення MCP конфігу для notes сервера
         mcp_config = CONFIG_ROOT / "mcp" / "config.json"
         if mcp_config.exists():
-            import json
+            import json  # noqa: E402
 
             try:
                 with open(mcp_config, "r") as f:
@@ -582,7 +554,7 @@ def sync_configs():
                             agents.append("grisha")
                             config["mcpServers"]["memory"]["agents"] = agents
                             print_info("Додано Grisha до memory сервера")
-                            
+
                     # Додаємо Vibe сервер якщо його немає
                     if "vibe" not in config.get("mcpServers", {}):
                         print_info("Додавання vibe MCP сервера до конфігурації...")
@@ -592,7 +564,7 @@ def sync_configs():
                             "description": "AI Coding Assistant & Self-Healing (Mistral)",
                             "disabled": False,
                             "tier": 2,
-                            "agents": ["atlas", "vibe"], # atlas uses it, vibe is the persona
+                            "agents": ["atlas", "vibe"],  # atlas uses it, vibe is the persona
                         }
                         print_success("Vibe MCP сервер додано")
 
@@ -621,13 +593,13 @@ def download_models():
         cmd = [
             venv_python,
             "-c",
-            f"from faster_whisper import WhisperModel; "
+            "from faster_whisper import WhisperModel; "
             f"WhisperModel('large-v3-turbo', device='cpu', compute_type='int8', download_root='{DIRS['stt_models']}'); "
-            f"print('STT OK')",
+            "print('STT OK')",
         ]
         subprocess.run(cmd, capture_output=True, timeout=600)
         print_success("STT модель готова")
-    except:
+    except Exception:
         print_warning("Помилка завантаження STT (буде завантажено при старті)")
 
     # TTS
@@ -636,13 +608,13 @@ def download_models():
         cmd = [
             venv_python,
             "-c",
-            f"from ukrainian_tts.tts import TTS; "
+            "from ukrainian_tts.tts import TTS; "
             f"TTS(cache_folder='{DIRS['tts_models']}', device='cpu'); "
-            f"print('TTS OK')",
+            "print('TTS OK')",
         ]
         subprocess.run(cmd, capture_output=True, timeout=300)
         print_success("TTS моделі готові")
-    except:
+    except Exception:
         print_warning("Помилка завантаження TTS")
 
 
@@ -668,12 +640,7 @@ def check_services():
 
             # Fallback: check functional ping (Redis only)
             if service == "redis" and shutil.which("redis-cli"):
-                if (
-                    subprocess.run(
-                        ["redis-cli", "ping"], capture_output=True
-                    ).returncode
-                    == 0
-                ):
+                if subprocess.run(["redis-cli", "ping"], capture_output=True).returncode == 0:
                     print_success(f"{label} запущено (CLI)")
                     continue
 
@@ -683,9 +650,7 @@ def check_services():
                     print_success(f"{label} запущено (CLI)")
                     continue
 
-            print_warning(
-                f"{label} НЕ запущено. Спробуйте: brew services start {service}"
-            )
+            print_warning(f"{label} НЕ запущено. Спробуйте: brew services start {service}")
 
         except Exception as e:
             print_warning(f"Не вдалося перевірити {label}: {e}")
@@ -696,7 +661,7 @@ def check_services():
             print_success("Docker запущено")
         else:
             print_warning("Docker Desktop НЕ запущено (Запустіть додаток Docker)")
-    except:
+    except Exception:
         print_warning("Docker не знайдено")
 
 
@@ -704,9 +669,7 @@ def main():
     print(
         f"\n{Colors.HEADER}{Colors.BOLD}╔══════════════════════════════════════════╗{Colors.ENDC}"
     )
-    print(
-        f"{Colors.HEADER}{Colors.BOLD}║  AtlasTrinity Full Stack Dev Setup      ║{Colors.ENDC}"
-    )
+    print(f"{Colors.HEADER}{Colors.BOLD}║  AtlasTrinity Full Stack Dev Setup      ║{Colors.ENDC}")
     print(
         f"{Colors.HEADER}{Colors.BOLD}╚══════════════════════════════════════════╝{Colors.ENDC}\n"
     )

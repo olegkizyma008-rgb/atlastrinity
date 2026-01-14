@@ -23,9 +23,7 @@ try:
     WHISPER_AVAILABLE = True
 except ImportError:
     WHISPER_AVAILABLE = False
-    print(
-        "[STT] Warning: faster-whisper not installed. Run: pip install faster-whisper"
-    )
+    print("[STT] Warning: faster-whisper not installed. Run: pip install faster-whisper")
 
 # Try to import audio recording
 try:
@@ -35,9 +33,7 @@ try:
     AUDIO_AVAILABLE = True
 except ImportError:
     AUDIO_AVAILABLE = False
-    print(
-        "[STT] Warning: sounddevice/soundfile not installed. Audio recording disabled."
-    )
+    print("[STT] Warning: sounddevice/soundfile not installed. Audio recording disabled.")
 
 
 class SpeechType(str, Enum):
@@ -132,14 +128,10 @@ class WhisperSTT:
         """Lazy-load Faster Whisper model non-blockingly"""
         if self._model is None:
             if not WHISPER_AVAILABLE:
-                logger.error(
-                    "[STT] faster-whisper is not installed. Cannot load WhisperModel."
-                )
+                logger.error("[STT] faster-whisper is not installed. Cannot load WhisperModel.")
                 return None
 
-            print(
-                f"[STT] Loading Faster-Whisper model: {self.model_name} on {self.device}..."
-            )
+            print(f"[STT] Loading Faster-Whisper model: {self.model_name} on {self.device}...")
             self.download_root.mkdir(parents=True, exist_ok=True)
 
             def load():
@@ -154,15 +146,11 @@ class WhisperSTT:
             print(f"[STT] Model loaded successfully from {self.download_root}")
         return self._model
 
-    async def transcribe_file(
-        self, audio_path: str, language: str = None
-    ) -> TranscriptionResult:
+    async def transcribe_file(self, audio_path: str, language: str = None) -> TranscriptionResult:
         language = language or self.language
 
         if not WHISPER_AVAILABLE:
-            return TranscriptionResult(
-                text="", language="uk", confidence=0, segments=[]
-            )
+            return TranscriptionResult(text="", language="uk", confidence=0, segments=[])
 
         model = await self.get_model()
 
@@ -185,9 +173,7 @@ class WhisperSTT:
 
             # Calculate average confidence
             if segments_list:
-                avg_prob = sum(s.avg_logprob for s in segments_list) / len(
-                    segments_list
-                )
+                avg_prob = sum(s.avg_logprob for s in segments_list) / len(segments_list)
                 # Convert logprob to 0-1 range (approximate)
                 confidence = max(0.0, min(1.0, (avg_prob + 3.0) / 3.0))
             else:
@@ -197,10 +183,7 @@ class WhisperSTT:
                 text=full_text,
                 language=info.language,
                 confidence=confidence,
-                segments=[
-                    {"text": s.text, "start": s.start, "end": s.end}
-                    for s in segments_list
-                ],
+                segments=[{"text": s.text, "start": s.start, "end": s.end} for s in segments_list],
                 no_speech_prob=(
                     1.0 - info.probability_of_speech
                     if hasattr(info, "probability_of_speech")
@@ -209,9 +192,7 @@ class WhisperSTT:
             )
         except Exception as e:
             print(f"[STT] Transcription error: {e}")
-            return TranscriptionResult(
-                text="", language=language, confidence=0, segments=[]
-            )
+            return TranscriptionResult(text="", language=language, confidence=0, segments=[])
 
     async def transcribe_with_analysis(
         self, audio_path: str, previous_text: str = "", language: str = None
@@ -267,9 +248,7 @@ class WhisperSTT:
             no_speech_prob=result.no_speech_prob,
         )
 
-    def _analyze_speech_type(
-        self, result: TranscriptionResult, previous_text: str
-    ) -> SpeechType:
+    def _analyze_speech_type(self, result: TranscriptionResult, previous_text: str) -> SpeechType:
         text = result.text.strip().lower()
 
         if not text or result.no_speech_prob > 0.7:
@@ -414,9 +393,7 @@ class WhisperSTT:
 
         fs = 16000
         print(f"[STT] Recording for {duration} seconds...")
-        recording = await asyncio.to_thread(
-            sd.rec, int(duration * fs), samplerate=fs, channels=1
-        )
+        recording = await asyncio.to_thread(sd.rec, int(duration * fs), samplerate=fs, channels=1)
         await asyncio.to_thread(sd.wait)
 
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tf:

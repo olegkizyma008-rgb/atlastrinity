@@ -13,9 +13,9 @@ async def test_fetch_urls_patch(monkeypatch):
     captured = {}
 
     async def fake_call(server, tool, args):
-        captured['server'] = server
-        captured['tool'] = tool
-        captured['args'] = dict(args)  # copy to inspect
+        captured["server"] = server
+        captured["tool"] = tool
+        captured["args"] = dict(args)  # copy to inspect
         return {"success": True, "output": "ok"}
 
     monkeypatch.setattr(tet, "_call_mcp_direct", fake_call)
@@ -23,6 +23,6 @@ async def test_fetch_urls_patch(monkeypatch):
     tool_call = {"name": "fetch", "args": {"urls": ["http://example.com"]}}
     result = await tet._execute_tool(tool_call)
 
-    assert captured['args'].get('url') == "http://example.com"
+    assert captured["args"].get("url") == "http://example.com"
     assert isinstance(result, dict)
-    assert result.get('success') is True
+    assert result.get("success") is True

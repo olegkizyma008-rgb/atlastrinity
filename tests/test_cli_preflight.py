@@ -15,9 +15,7 @@ def test_run_no_issues(monkeypatch, tmp_path):
     p.write_text(json.dumps(cfg))
 
     # Monkeypatch the scanner to return no issues
-    monkeypatch.setattr(
-        "src.brain.mcp_preflight.scan_mcp_config_for_package_issues", lambda x: []
-    )
+    monkeypatch.setattr("src.brain.mcp_preflight.scan_mcp_config_for_package_issues", lambda x: [])
     # Also bypass system limits detection for this unit test
     monkeypatch.setattr("src.brain.mcp_preflight.check_system_limits", lambda: [])
     rc = cli.run(str(p))

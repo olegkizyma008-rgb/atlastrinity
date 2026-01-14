@@ -119,13 +119,9 @@ def sync_yaml_config(src_path: Path, dst_path: Path) -> bool:
             f.write(
                 f"# Last sync: {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
             )
-            yaml.dump(
-                merged, f, allow_unicode=True, default_flow_style=False, sort_keys=False
-            )
+            yaml.dump(merged, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
 
-        print(
-            f"[Production Setup] ✓ Merged: {dst_path.name} (backup: {backup_path.name})"
-        )
+        print(f"[Production Setup] ✓ Merged: {dst_path.name} (backup: {backup_path.name})")
         return True
 
     except Exception as e:
@@ -158,9 +154,7 @@ def sync_json_config(src_path: Path, dst_path: Path) -> bool:
             shutil.copy2(dst_path, backup_path)
             with open(dst_path, "w", encoding="utf-8") as f:
                 json.dump(merged, f, ensure_ascii=False, indent=2)
-            print(
-                f"[Production Setup] ✓ Merged: {dst_path.name} (backup: {backup_path.name})"
-            )
+            print(f"[Production Setup] ✓ Merged: {dst_path.name} (backup: {backup_path.name})")
         else:
             print(f"[Production Setup] ✓ Up-to-date: {dst_path.name}")
 
@@ -222,9 +216,7 @@ def ensure_tts_models():
     missing = [f for f in required_files if not (MODELS_DIR / f).exists()]
 
     if missing:
-        print(
-            "[Production Setup] ℹ️  TTS models will be downloaded automatically on first use"
-        )
+        print("[Production Setup] ℹ️  TTS models will be downloaded automatically on first use")
         print(f"[Production Setup] Missing files: {missing}")
         print(f"[Production Setup] Target directory: {MODELS_DIR}")
     else:
@@ -236,9 +228,7 @@ def ensure_stt_models():
     Перевіряє наявність Faster-Whisper моделей в ~/.config/atlastrinity/models/faster-whisper/
     """
     if not WHISPER_DIR.exists() or not any(WHISPER_DIR.iterdir()):
-        print(
-            "[Production Setup] ℹ️  Whisper models will be downloaded automatically on first use"
-        )
+        print("[Production Setup] ℹ️  Whisper models will be downloaded automatically on first use")
         print(f"[Production Setup] Target directory: {WHISPER_DIR}")
     else:
         print(f"[Production Setup] ✓ Faster-Whisper models present in {WHISPER_DIR}")

@@ -5,8 +5,8 @@ import sys
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.brain.config import ensure_dirs
-from src.brain.mcp_manager import mcp_manager
+from src.brain.config import ensure_dirs  # noqa: E402
+from src.brain.mcp_manager import mcp_manager  # noqa: E402
 
 
 async def verify_all():
@@ -27,12 +27,10 @@ async def verify_all():
             print(f"Skipping {server_name} (Disabled)")
             continue
 
-        print( "[{server_name}] Checking...", end=" ", flush=True)
+        print("[{server_name}] Checking...", end=" ", flush=True)
         try:
             # We use a wrapper with a total timeout for the entire check
-            session = await asyncio.wait_for(
-                mcp_manager.get_session(server_name), timeout=180
-            )
+            session = await asyncio.wait_for(mcp_manager.get_session(server_name), timeout=180)
             if session:
                 tools = await mcp_manager.list_tools(server_name)
                 print(f"✅ ONLINE ({len(tools)} tools)")

@@ -79,7 +79,7 @@ class Trinity:
                 "logs": [],
             }
             logger.info("[ORCHESTRATOR] State initialized during initialize()")
-        
+
         # Start MCP health check loop
         mcp_manager.start_health_monitoring(interval=60)
         # Initialize DB
@@ -161,9 +161,7 @@ class Trinity:
             if "messages" not in self.state:
                 self.state["messages"] = []
             # Append to chat history
-            self.state["messages"].append(
-                AIMessage(content=text, name=agent_id.upper())
-            )
+            self.state["messages"].append(AIMessage(content=text, name=agent_id.upper()))
 
         await self._log(text, source=agent_id, type="voice")
         try:
@@ -238,9 +236,7 @@ class Trinity:
                 file_node_id,
                 {"description": "File used or created by task", "path": file_path},
             )
-            relation = (
-                "MODIFIED" if "write" in shared_context.last_operation else "ACCESSED"
-            )
+            relation = "MODIFIED" if "write" in shared_context.last_operation else "ACCESSED"
             await knowledge_graph.add_edge(task_node_id, file_node_id, relation)
 
         # 3. USER node
@@ -283,9 +279,7 @@ class Trinity:
             if task_id_str:
                 try:
                     task_id = uuid.UUID(task_id_str)
-                    result = await db_sess.execute(
-                        select(DBTask).where(DBTask.id == task_id)
-                    )
+                    result = await db_sess.execute(select(DBTask).where(DBTask.id == task_id))
                     if not result.scalar():
                         logger.warning(
                             f"[ORCHESTRATOR] Restored task_id {task_id_str} not found in DB. Clearing."
@@ -480,9 +474,7 @@ class Trinity:
             async def keep_alive_logging():
                 while True:
                     await asyncio.sleep(4)
-                    await self._log(
-                        "Atlas is thinking... (Planning logic flow)", "system"
-                    )
+                    await self._log("Atlas is thinking... (Planning logic flow)", "system")
 
             planning_task = asyncio.create_task(self.atlas.create_plan(analysis))
             logger_task = asyncio.create_task(keep_alive_logging())
@@ -595,18 +587,15 @@ class Trinity:
                 user_request, self.state["step_results"]
             )
 
-            if (
-                evaluation.get("should_remember")
-                and evaluation.get("quality_score", 0) >= 0.7
-            ):
+            if evaluation.get("should_remember") and evaluation.get("quality_score", 0) >= 0.7:
                 await self._log(
                     f"Verification Pass: Score {evaluation.get('quality_score')} ({evaluation.get('analysis')})",
                     "atlas",
                 )
 
-                strategy_steps = evaluation.get(
-                    "compressed_strategy"
-                ) or self._extract_golden_path(self.state["step_results"])
+                strategy_steps = evaluation.get("compressed_strategy") or self._extract_golden_path(
+                    self.state["step_results"]
+                )
 
                 long_term_memory.remember_strategy(
                     task=user_request,
@@ -614,9 +603,7 @@ class Trinity:
                     outcome="SUCCESS",
                     success=True,
                 )
-                await self._log(
-                    f"Brain saved {len(strategy_steps)} steps to memory", "system"
-                )
+                await self._log(f"Brain saved {len(strategy_steps)} steps to memory", "system")
 
                 # Update DB Task with quality metric
                 if db_manager.available and self.state.get("db_task_id"):
@@ -716,9 +703,7 @@ class Trinity:
             # Update step object with this dynamic ID (for logging/recovery context)
             step["id"] = step_id
 
-            notifications.show_progress(
-                i + 1, len(steps), f"[{step_id}] {step.get('action')}"
-            )
+            notifications.show_progress(i + 1, len(steps), f"[{step_id}] {step.get('action')}")
 
             # Retry loop with Dynamic Temperature
             max_step_retries = 3
@@ -766,21 +751,23 @@ class Trinity:
                     # Collect recent logs for context
                     recent_logs = []
                     if self.state and "logs" in self.state:
-                       recent_logs = [
-                           f"[{l.get('agent', 'SYS')}] {l.get('message', '')}"
-                           for l in self.state["logs"][-20:]
-                       ]
+                        recent_logs = [
+                            f"[{l.get('agent', 'SYS')}] {l.get('message', '')}"
+                            for l in self.state["logs"][-20:]
+                        ]
                     log_context = "\n".join(recent_logs)
 
                     # Construct detailed error context for Vibe
-                    error_context = (
-                        f"Step ID: {step_id}\n"
-                        f"Action: {step.get('action', '')}\n"
+                    error_context = f"Step ID: {step_id}\n" f"Action: {step.get('action', '')}\n"
+
+                    await self._log(
+                        f"Engaging Vibe Self-Healing for Step {step_id} (Timeout: 300s)...",
+                        "orchestrator",
                     )
-                    
-                    await self._log(f"Engaging Vibe Self-Healing for Step {step_id} (Timeout: 300s)...", "orchestrator")
                     await self._log(f"[VIBE] Error to analyze: {last_error[:200]}...", "vibe")
-                    await self._speak("atlas", self.atlas.get_voice_message("vibe_engaged", step_id=step_id))
+                    await self._speak(
+                        "atlas", self.atlas.get_voice_message("vibe_engaged", step_id=step_id)
+                    )
 
                     # Use vibe_analyze_error for programmatic CLI mode with full logging
                     vibe_res = await asyncio.wait_for(
@@ -797,29 +784,21 @@ class Trinity:
                         ),
                         timeout=310.0,
                     )
-                    vibe_text = self._extract_vibe_payload(
-                        self._mcp_result_to_text(vibe_res)
-                    )
+                    vibe_text = self._extract_vibe_payload(self._mcp_result_to_text(vibe_res))
                     if vibe_text:
                         last_error = last_error + "\n\nVIBE_FIX_REPORT:\n" + vibe_text[:4000]
-                        await self._log(
-                            f"Vibe completed self-healing for step {step_id}", "system"
-                        )
+                        await self._log(f"Vibe completed self-healing for step {step_id}", "system")
                 except Exception as ve:
                     await self._log(f"Vibe self-healing failed: {ve}", "error")
 
                 try:
                     # Ask Atlas for help
                     recovery = await asyncio.wait_for(
-                        self.atlas.help_tetyana(
-                            step.get("action", f"Step {step_id}"), last_error
-                        ),
+                        self.atlas.help_tetyana(step.get("action", f"Step {step_id}"), last_error),
                         timeout=45.0,
                     )
 
-                    voice_msg = recovery.get(
-                        "voice_message", "Знайшов альтернативний шлях."
-                    )
+                    voice_msg = recovery.get("voice_message", "Знайшов альтернативний шлях.")
                     await self._speak("atlas", voice_msg)
 
                     alt_steps = recovery.get("alternative_steps", [])
@@ -938,9 +917,7 @@ class Trinity:
         # Update DB Step
         if db_manager.available and db_step_id:
             try:
-                duration_ms = int(
-                    (asyncio.get_event_loop().time() - step_start_time) * 1000
-                )
+                duration_ms = int((asyncio.get_event_loop().time() - step_start_time) * 1000)
                 async with await db_manager.get_session() as db_sess:
                     from sqlalchemy import update
 
@@ -960,9 +937,7 @@ class Trinity:
         # Check verification
         if step.get("requires_verification"):
             self.state["system_state"] = SystemState.VERIFYING.value
-            await self._speak(
-                "tetyana", self.tetyana.get_voice_message("asking_verification")
-            )
+            await self._speak("tetyana", self.tetyana.get_voice_message("asking_verification"))
 
             try:
                 # OPTIMIZATION: Reduced delay from 2.5s to 0.5s
@@ -972,13 +947,13 @@ class Trinity:
                 # Only take screenshot if visual verification is needed
                 expected = step.get("expected_result", "").lower()
                 visual_verification_needed = (
-                    "visual" in expected or 
-                    "screenshot" in expected or
-                    "ui" in expected or
-                    "interface" in expected or
-                    "window" in expected
+                    "visual" in expected
+                    or "screenshot" in expected
+                    or "ui" in expected
+                    or "interface" in expected
+                    or "window" in expected
                 )
-                
+
                 screenshot = None
                 if visual_verification_needed:
                     screenshot = await self.grisha.take_screenshot()

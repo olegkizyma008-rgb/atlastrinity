@@ -6,8 +6,8 @@ from pathlib import Path
 # Add src to path
 sys.path.append(str(Path(__file__).parents[1]))
 
-from src.brain.logger import logger
-from src.brain.mcp_manager import mcp_manager
+from src.brain.logger import logger  # noqa: E402
+from src.brain.mcp_manager import mcp_manager  # noqa: E402
 
 
 async def verify_server(name: str):

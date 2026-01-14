@@ -56,7 +56,7 @@ class SystemConfig:
         # 1. Ensure global config.yaml exists
         # 1. Ensure global config.yaml exists and is up-to-date with template
         template_yaml = PROJECT_ROOT / "config" / "config.yaml"
-        
+
         if not global_path.exists():
             # First run: copy template directly
             if template_yaml.exists():
@@ -78,24 +78,19 @@ class SystemConfig:
                         template_data = yaml.safe_load(f) or {}
                     with open(global_path, "r", encoding="utf-8") as f:
                         user_data = yaml.safe_load(f) or {}
-                    
+
                     # Merge user data ON TOP of template defaults
                     merged = deep_merge(template_data, user_data)
-                    
+
                     # If there are changes (e.g. new keys from template), update global file
                     if merged != user_data:
                         # Create backup before modifying
                         backup_path = global_path.with_suffix(".yaml.backup")
                         shutil.copy2(global_path, backup_path)
-                        
+
                         with open(global_path, "w", encoding="utf-8") as f:
-                            yaml.dump(
-                                merged,
-                                f,
-                                default_flow_style=False,
-                                allow_unicode=True
-                            )
-                        # logger is not initialized yet provided config_loader is imported early, 
+                            yaml.dump(merged, f, default_flow_style=False, allow_unicode=True)
+                        # logger is not initialized yet provided config_loader is imported early,
                         # but this ensures config is fresh.
             except Exception as e:
                 # Fallback silently if sync fails to avoid boot loops
@@ -154,7 +149,9 @@ class SystemConfig:
                 },
                 "tetyana": {
                     "model": os.getenv("COPILOT_MODEL", "gpt-4.1"),  # Execution (Main)
-                    "reasoning_model": os.getenv("COPILOT_MODEL", "gpt-4.1"),  # Tool Selection (Reasoning)
+                    "reasoning_model": os.getenv(
+                        "COPILOT_MODEL", "gpt-4.1"
+                    ),  # Tool Selection (Reasoning)
                     "reflexion_model": os.getenv("COPILOT_MODEL", "gpt-4.1"),  # Self-Correction
                     "temperature": 0.5,
                     "max_tokens": 2000,
@@ -176,7 +173,7 @@ class SystemConfig:
                 "computer_use": {"enabled": True},
             },
             "security": {
-                "dangerous_commands": ["rm -rf", "mkfs"],
+                "dangerous_commands": ["rm -r", "mkfs"],
                 "require_confirmation": True,
             },
             "voice": {

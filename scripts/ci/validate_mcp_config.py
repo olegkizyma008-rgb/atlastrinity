@@ -34,9 +34,7 @@ def validate_server_config(name: str, config: Dict[str, Any]) -> List[str]:
             valid_agents = {"atlas", "tetyana", "grisha"}
             for agent in config["agents"]:
                 if agent not in valid_agents:
-                    errors.append(
-                        f"{name}: Invalid agent '{agent}', must be one of {valid_agents}"
-                    )
+                    errors.append(f"{name}: Invalid agent '{agent}', must be one of {valid_agents}")
 
     # Validate environment variables format
     if "env" in config:

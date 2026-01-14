@@ -6,16 +6,13 @@ import asyncio
 import os
 from typing import Optional
 
-from sqlalchemy.ext.asyncio import (AsyncSession, async_sessionmaker,
-                                    create_async_engine)
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from .schema import Base
 
 # Default connection string (can be overridden by Env)
 # Using 'postgresql+asyncpg' driver
-DB_URL = os.getenv(
-    "DATABASE_URL", "postgresql+asyncpg://dev:postgres@localhost/atlastrinity_db"
-)
+DB_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://dev:postgres@localhost/atlastrinity_db")
 
 
 class DatabaseManager:
@@ -33,9 +30,7 @@ class DatabaseManager:
             async with self._engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
 
-            self._session_maker = async_sessionmaker(
-                self._engine, expire_on_commit=False
-            )
+            self._session_maker = async_sessionmaker(self._engine, expire_on_commit=False)
             self.available = True
             print("[DB] Database initialized successfully.")
         except Exception as e:

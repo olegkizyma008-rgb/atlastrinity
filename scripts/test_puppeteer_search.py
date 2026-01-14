@@ -22,9 +22,7 @@ async def run_search():
     shot = await mcp_manager.call_tool(
         "puppeteer", "puppeteer_screenshot", {"name": "1337x_search", "encoded": True}
     )
-    print(
-        "Screenshot result:", "ok" if shot and not shot.get("isError", False) else shot
-    )
+    print("Screenshot result:", "ok" if shot and not shot.get("isError", False) else shot)
 
     print("Attempting to extract first torrent link via evaluate script...")
     script = """(() => {
@@ -43,9 +41,7 @@ async def run_search():
         return null;
     })();"""
 
-    eval_res = await mcp_manager.call_tool(
-        "puppeteer", "puppeteer_evaluate", {"script": script}
-    )
+    eval_res = await mcp_manager.call_tool("puppeteer", "puppeteer_evaluate", {"script": script})
     print("Evaluate result:", eval_res)
 
     # Cleanup

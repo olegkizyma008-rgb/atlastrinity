@@ -40,9 +40,7 @@ async def _transcribe_via_brain(audio_path: str):
             if health.status_code == 200:
                 with open(audio_path, "rb") as f:
                     files = {"audio": (os.path.basename(audio_path), f, "audio/wav")}
-                    response = await client.post(
-                        "http://127.0.0.1:8000/api/stt", files=files
-                    )
+                    response = await client.post("http://127.0.0.1:8000/api/stt", files=files)
                     if response.status_code == 200:
                         return response.json().get("text", "")
     except Exception as e:

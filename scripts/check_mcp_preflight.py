@@ -22,12 +22,7 @@ def run(config: str | None = None) -> int:
     else:
         cfg_path = Path.home() / ".config" / "atlastrinity" / "mcp" / "config.json"
         if not cfg_path.exists():
-            cfg_path = (
-                Path(__file__).resolve().parents[1]
-                / "src"
-                / "mcp_server"
-                / "config.json"
-            )
+            cfg_path = Path(__file__).resolve().parents[1] / "src" / "mcp_server" / "config.json"
 
     print(f"MCP preflight: scanning config {cfg_path}")
     pkg_issues = scan_mcp_config_for_package_issues(cfg_path)
@@ -59,7 +54,7 @@ def run(config: str | None = None) -> int:
         for it in sys_issues:
             print(f"  - {it}")
             print(
-                f"    ⚠️ System limit detected. On macOS you can increase via: sudo sysctl -w kern.maxproc=4096; sudo sysctl -w kern.maxprocperuid=2048; and increase ulimit -u in shell settings."
+                "    ⚠️ System limit detected. On macOS you can increase via: sudo sysctl -w kern.maxproc=4096; sudo sysctl -w kern.maxprocperuid=2048; and increase ulimit -u in shell settings."
             )
         if os.getenv("FAIL_ON_SYS_LIMITS") == "1":
             print(
@@ -79,9 +74,7 @@ def run(config: str | None = None) -> int:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--config", help="Path to MCP config.json to scan", default=None
-    )
+    parser.add_argument("--config", help="Path to MCP config.json to scan", default=None)
     args = parser.parse_args()
     rc = run(args.config)
     sys.exit(rc)

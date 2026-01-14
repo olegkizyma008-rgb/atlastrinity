@@ -4,11 +4,14 @@ from pathlib import Path
 
 import pytest
 
-from src.brain.mcp_preflight import (_parse_package_arg, bunx_package_exists,
-                                     check_package_arg_for_tool,
-                                     npm_package_exists,
-                                     npm_registry_has_version,
-                                     scan_mcp_config_for_package_issues)
+from src.brain.mcp_preflight import (
+    _parse_package_arg,
+    bunx_package_exists,
+    check_package_arg_for_tool,
+    npm_package_exists,
+    npm_registry_has_version,
+    scan_mcp_config_for_package_issues,
+)
 
 
 class DummyCompleted:
@@ -241,9 +244,7 @@ def test_scan_mcp_config_for_python_present(tmp_path, monkeypatch):
     import importlib
 
     monkeypatch.setattr(importlib.util, "find_spec", lambda name: object())
-    monkeypatch.setattr(
-        "src.brain.mcp_preflight._run_cmd", lambda cmd, timeout=5: (0, "", "")
-    )
+    monkeypatch.setattr("src.brain.mcp_preflight._run_cmd", lambda cmd, timeout=5: (0, "", ""))
 
     issues = scan_mcp_config_for_package_issues(p)
     assert not any("mcp_server_docker" in s for s in issues)

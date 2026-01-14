@@ -5,8 +5,8 @@ import sys
 # Add src to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.brain.agents.grisha import Grisha
-from src.brain.logger import logger
+from src.brain.agents.grisha import Grisha  # noqa: E402
+from src.brain.logger import logger  # noqa: E402
 
 
 async def test_strategy_planning():
@@ -19,9 +19,7 @@ async def test_strategy_planning():
     expected_result = "Application is removed and no longer running."
 
     print(f"\n--- Testing Strategy for Task: {task_action} ---")
-    strategy = await grisha._plan_verification_strategy(
-        task_action, expected_result, context
-    )
+    strategy = await grisha._plan_verification_strategy(task_action, expected_result, context)
 
     print("\n[GENERATED STRATEGY]")
     print(strategy)

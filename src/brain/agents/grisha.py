@@ -8,14 +8,14 @@ Model: GPT-4o (Vision)
 
 import base64
 import os
+
 # Robust path handling for both Dev and Production (Packaged)
 import sys
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-from tenacity import (retry, retry_if_exception_type, stop_after_attempt,
-                      wait_exponential)
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 root_dev = os.path.join(current_dir, "..", "..", "..")
@@ -88,17 +88,13 @@ class Grisha:
 
         final_model = vision_model
         if vision_model == "gpt-4o":  # default parameter
-            final_model = agent_config.get("vision_model") or os.getenv(
-                "VISION_MODEL", "gpt-4o"
-            )
+            final_model = agent_config.get("vision_model") or os.getenv("VISION_MODEL", "gpt-4o")
 
         self.llm = CopilotLLM(model_name=final_model, vision_model_name=final_model)
         self.temperature = agent_config.get("temperature", 0.3)
 
         # Load dangerous commands from config with fallback to hardcoded BLOCKLIST
-        self.dangerous_commands = security_config.get(
-            "dangerous_commands", self.BLOCKLIST
-        )
+        self.dangerous_commands = security_config.get("dangerous_commands", self.BLOCKLIST)
         self.verifications: list = []
 
         # OPTIMIZATION: Strategy cache to avoid redundant LLM calls
@@ -110,9 +106,7 @@ class Grisha:
             "STRATEGY_MODEL", "raptor-mini"
         )
         self.strategist = CopilotLLM(model_name=strategy_model)
-        logger.info(
-            f"[GRISHA] Initialized with Vision={final_model}, Strategy={strategy_model}"
-        )
+        logger.info(f"[GRISHA] Initialized with Vision={final_model}, Strategy={strategy_model}")
 
     async def _plan_verification_strategy(
         self,
@@ -125,7 +119,7 @@ class Grisha:
         Uses Raptor-Mini (MSP Reasoning) to create a robust verification strategy.
         OPTIMIZATION: Caches strategies by step type to avoid redundant LLM calls.
         """
-        from langchain_core.messages import HumanMessage, SystemMessage
+        from langchain_core.messages import HumanMessage, SystemMessage  # noqa: E402
 
         # OPTIMIZATION: Check cache first
         cache_key = f"{step_action[:50]}:{expected_result[:50]}"
@@ -164,7 +158,9 @@ class Grisha:
                 return True
         return False
 
-    def _decide_verification_stack(self, step_action: str, expected_result: str, context: dict) -> dict:
+    def _decide_verification_stack(
+        self, step_action: str, expected_result: str, context: dict
+    ) -> dict:
         """
         Decide whether to prefer Vision or MCP tools based on:
         - whether the step is visual (ui/screenshot/window)
@@ -174,7 +170,16 @@ class Grisha:
 
         Returns a dict: {prefer_vision_first, use_mcp, preferred_servers, rationale}
         """
-        visual_keywords = ("visual", "screenshot", "ui", "interface", "window", "dialog", "button", "icon")
+        visual_keywords = (
+            "visual",
+            "screenshot",
+            "ui",
+            "interface",
+            "window",
+            "dialog",
+            "button",
+            "icon",
+        )
         system_keywords = (
             "file",
             "install",
@@ -196,22 +201,24 @@ class Grisha:
         )
 
         visual_needed = any(
-            kw in expected_result.lower() or kw in step_action.lower()
-            for kw in visual_keywords
+            kw in expected_result.lower() or kw in step_action.lower() for kw in visual_keywords
         )
         system_needed = any(
-            kw in expected_result.lower() or kw in step_action.lower()
-            for kw in system_keywords
+            kw in expected_result.lower() or kw in step_action.lower() for kw in system_keywords
         )
 
         try:
-            from ..mcp_manager import mcp_manager
+            from ..mcp_manager import mcp_manager  # noqa: E402
 
             servers_cfg = getattr(mcp_manager, "config", {}).get("mcpServers", {})
             servers = list(servers_cfg.keys())
             swift_servers = []
             for s, cfg in servers_cfg.items():
-                if "swift" in s.lower() or "macos" in s.lower() or "mcp-server-macos-use" in s.lower():
+                if (
+                    "swift" in s.lower()
+                    or "macos" in s.lower()
+                    or "mcp-server-macos-use" in s.lower()
+                ):
                     swift_servers.append(s)
                 else:
                     cmd = (cfg or {}).get("command", "") or ""
@@ -248,9 +255,7 @@ class Grisha:
         stop=stop_after_attempt(3),
         retry=retry_if_exception_type((ConnectionError, TimeoutError)),
     )
-    async def _call_tool_with_retry(
-        self, mcp_manager, server: str, tool: str, args: dict
-    ):
+    async def _call_tool_with_retry(self, mcp_manager, server: str, tool: str, args: dict):
         """
         Call MCP tool with exponential backoff retry.
         Handles transient connection issues gracefully.
@@ -267,9 +272,9 @@ class Grisha:
         """
         Verifies the result of step execution using Vision and MCP Tools
         """
-        from langchain_core.messages import HumanMessage, SystemMessage
+        from langchain_core.messages import HumanMessage, SystemMessage  # noqa: E402
 
-        from ..mcp_manager import mcp_manager
+        from ..mcp_manager import mcp_manager  # noqa: E402
 
         step_id = step.get("id", 0)
         expected = step.get("expected_result", "")
@@ -277,11 +282,11 @@ class Grisha:
         # PRIORITY: Use MCP tools first, screenshots only when explicitly needed
         # Only take screenshot if explicitly requested or if visual verification is clearly needed
         visual_verification_needed = (
-            "visual" in expected.lower() or 
-            "screenshot" in expected.lower() or
-            "ui" in expected.lower() or
-            "interface" in expected.lower() or
-            "window" in expected.lower()
+            "visual" in expected.lower()
+            or "screenshot" in expected.lower()
+            or "ui" in expected.lower()
+            or "interface" in expected.lower()
+            or "window" in expected.lower()
         )
 
         if (
@@ -295,7 +300,8 @@ class Grisha:
         # If we don't already have a screenshot path, try to find artifacts saved by Tetyana
         if not screenshot_path:
             try:
-                from ..mcp_manager import mcp_manager
+                # from ..mcp_manager import mcp_manager  # noqa: E402
+
                 notes_search = await mcp_manager.call_tool(
                     "notes",
                     "search_notes",
@@ -307,14 +313,16 @@ class Grisha:
                         if note_file and os.path.exists(note_file):
                             try:
                                 text = open(note_file, "r", encoding="utf-8").read()
-                                import re
+                                import re  # noqa: E402
 
                                 m = re.search(r"(/[^\s']+?\.png)", text)
                                 if m:
                                     candidate = m.group(1)
                                     if os.path.exists(candidate):
                                         screenshot_path = candidate
-                                        logger.info(f"[GRISHA] Found screenshot from notes: {candidate}")
+                                        logger.info(
+                                            f"[GRISHA] Found screenshot from notes: {candidate}"
+                                        )
                                         break
                             except Exception:
                                 pass
@@ -461,14 +469,10 @@ class Grisha:
                         )
                     args["path"] = resolved_path
 
-                logger.info(
-                    f"[GRISHA] Internal Verification Tool: {server}.{tool}({args})"
-                )
+                logger.info(f"[GRISHA] Internal Verification Tool: {server}.{tool}({args})")
 
                 try:
-                    tool_output = await self._call_tool_with_retry(
-                        mcp_manager, server, tool, args
-                    )
+                    tool_output = await self._call_tool_with_retry(mcp_manager, server, tool, args)
                     if "path" in args and tool_output:
                         shared_context.update_path(args["path"], "verify")
                     logger.info(f"[GRISHA] Tool Output: {str(tool_output)[:500]}...")
@@ -481,11 +485,7 @@ class Grisha:
                             if not new_path and hasattr(tool_output, "content"):
                                 for item in getattr(tool_output, "content", []) or []:
                                     txt = getattr(item, "text", "")
-                                    if (
-                                        isinstance(txt, str)
-                                        and "/" in txt
-                                        and ".png" in txt
-                                    ):
+                                    if isinstance(txt, str) and "/" in txt and ".png" in txt:
                                         parts = txt.split()
                                         for p in reversed(parts):
                                             if p.startswith("/") and p.endswith(".png"):
@@ -500,23 +500,25 @@ class Grisha:
                             else:
                                 # FALLBACK: search notes for verification_artifact notes for this step
                                 try:
-                                    from ..mcp_manager import mcp_manager
+                                    from ..mcp_manager import mcp_manager  # noqa: E402
+
                                     notes_search = await mcp_manager.call_tool(
                                         "notes",
                                         "search_notes",
                                         {"tags": [f"step_{step_id}"], "limit": 5},
                                     )
-                                    if (
-                                        isinstance(notes_search, dict)
-                                        and notes_search.get("result", {}).get("success")
-                                    ):
+                                    if isinstance(notes_search, dict) and notes_search.get(
+                                        "result", {}
+                                    ).get("success"):
                                         for n in notes_search["result"].get("notes", []):
                                             note_file = n.get("file")
                                             if note_file and os.path.exists(note_file):
                                                 try:
-                                                    text = open(note_file, "r", encoding="utf-8").read()
+                                                    text = open(
+                                                        note_file, "r", encoding="utf-8"
+                                                    ).read()
                                                     # Find absolute png paths
-                                                    import re
+                                                    import re  # noqa: E402
 
                                                     m = re.search(r"(/[^\s']+?\.png)", text)
                                                     if m:
@@ -524,16 +526,18 @@ class Grisha:
                                                         if os.path.exists(candidate):
                                                             screenshot_path = candidate
                                                             attach_screenshot_next = True
-                                                            logger.info(f"[GRISHA] Attached screenshot from note: {candidate}")
+                                                            logger.info(
+                                                                f"[GRISHA] Attached screenshot from note: {candidate}"
+                                                            )
                                                             break
                                                 except Exception:
                                                     pass
                                 except Exception as e:
-                                    logger.warning(f"[GRISHA] Could not search notes for artifacts: {e}")
+                                    logger.warning(
+                                        f"[GRISHA] Could not search notes for artifacts: {e}"
+                                    )
                         except Exception as e:
-                            logger.warning(
-                                f"[GRISHA] Could not attach refreshed screenshot: {e}"
-                            )
+                            logger.warning(f"[GRISHA] Could not attach refreshed screenshot: {e}")
                 except Exception as e:
                     tool_output = f"Error calling tool: {e}"
                     logger.error(f"[GRISHA] Tool Error: {e}")
@@ -609,13 +613,9 @@ class Grisha:
 
         logger.warning(f"[GRISHA] Forcing verdict after {max_attempts} attempts")
         success_count = sum(
-            1
-            for h in verification_history
-            if "error" not in str(h.get("result", "")).lower()
+            1 for h in verification_history if "error" not in str(h.get("result", "")).lower()
         )
-        auto_verified = (
-            success_count > 0 and success_count >= len(verification_history) // 2
-        )
+        auto_verified = success_count > 0 and success_count >= len(verification_history) // 2
 
         return VerificationResult(
             step_id=step_id,
@@ -634,15 +634,15 @@ class Grisha:
         self, step_id: int, step: Dict[str, Any], verification: VerificationResult
     ) -> None:
         """Save detailed rejection report to memory and notes servers for Atlas and Tetyana to access"""
-        from datetime import datetime
+        from datetime import datetime  # noqa: E402
 
-        from ..mcp_manager import mcp_manager
+        from ..mcp_manager import mcp_manager  # noqa: E402
 
         try:
             timestamp = datetime.now().isoformat()
 
             # Prepare detailed report text
-            report_text = f"""GRISHA VERIFICATION REPORT - REJECTED
+            report_text = """GRISHA VERIFICATION REPORT - REJECTED
 
 Step ID: {step_id}
 Action: {step.get('action', '')}
@@ -677,9 +677,7 @@ Timestamp: {timestamp}
                         ]
                     },
                 )
-                logger.info(
-                    f"[GRISHA] Rejection report saved to memory for step {step_id}"
-                )
+                logger.info(f"[GRISHA] Rejection report saved to memory for step {step_id}")
             except Exception as e:
                 logger.warning(f"[GRISHA] Failed to save to memory: {e}")
 
@@ -695,9 +693,7 @@ Timestamp: {timestamp}
                         "tags": ["grisha", "rejection", f"step_{step_id}", "failed"],
                     },
                 )
-                logger.info(
-                    f"[GRISHA] Rejection report saved to notes for step {step_id}"
-                )
+                logger.info(f"[GRISHA] Rejection report saved to notes for step {step_id}")
             except Exception as e:
                 logger.warning(f"[GRISHA] Failed to save to notes: {e}")
 
@@ -708,7 +704,7 @@ Timestamp: {timestamp}
         """
         Performs security check before execution
         """
-        from langchain_core.messages import HumanMessage, SystemMessage
+        from langchain_core.messages import HumanMessage, SystemMessage  # noqa: E402
 
         action_str = str(action)
         if self._check_blocklist(action_str):
@@ -738,19 +734,19 @@ Timestamp: {timestamp}
         - Active application window focus (AppleScript).
         - Combined context+detail image for GPT-4o Vision.
         """
-        import subprocess
-        import tempfile
-        from datetime import datetime
+        import subprocess  # noqa: E402
+        import tempfile  # noqa: E402
+        from datetime import datetime  # noqa: E402
 
-        from PIL import Image
+        from PIL import Image  # noqa: E402
 
-        from ..config import SCREENSHOTS_DIR
+        from ..config import SCREENSHOTS_DIR  # noqa: E402
 
         try:
             Quartz = None
             quartz_available = False
             try:
-                import Quartz as _Quartz  # type: ignore
+                import Quartz as _Quartz  # type: ignore  # noqa: E402
 
                 Quartz = _Quartz
                 quartz_available = True
@@ -814,9 +810,7 @@ Timestamp: {timestamp}
                                 pass
 
                 logger.info("[GRISHA] Capturing active application window...")
-                active_win_path = os.path.join(
-                    tempfile.gettempdir(), "grisha_active_win.png"
-                )
+                active_win_path = os.path.join(tempfile.gettempdir(), "grisha_active_win.png")
                 try:
                     window_list = Quartz.CGWindowListCopyWindowInfo(
                         Quartz.kCGWindowListOptionOnScreenOnly
@@ -886,9 +880,7 @@ Timestamp: {timestamp}
                         tempfile.gettempdir(),
                         f"grisha_full_{datetime.now().strftime('%H%M%S')}.png",
                     )
-                    subprocess.run(
-                        ["screencapture", "-x", tmp_full], capture_output=True
-                    )
+                    subprocess.run(["screencapture", "-x", tmp_full], capture_output=True)
                     if os.path.exists(tmp_full):
                         try:
                             with Image.open(tmp_full) as img:
@@ -913,9 +905,7 @@ Timestamp: {timestamp}
             target_w = 2048
             scale = target_w / max(1, desktop_canvas.width)
             dt_h = int(desktop_canvas.height * scale)
-            desktop_small = desktop_canvas.resize(
-                (target_w, max(1, dt_h)), Image.LANCZOS
-            )
+            desktop_small = desktop_canvas.resize((target_w, max(1, dt_h)), Image.LANCZOS)
 
             final_h = desktop_small.height
             if active_win_img:
@@ -940,11 +930,9 @@ Timestamp: {timestamp}
             return final_path
 
         except Exception as e:
-            logger.warning(
-                f"Combined screenshot failed: {e}. Falling back to simple grab."
-            )
+            logger.warning(f"Combined screenshot failed: {e}. Falling back to simple grab.")
             try:
-                from PIL import ImageGrab
+                from PIL import ImageGrab  # noqa: E402
 
                 screenshot = ImageGrab.grab(all_screens=True)
                 temp_path = os.path.join(
@@ -969,7 +957,7 @@ Timestamp: {timestamp}
 
     def _parse_response(self, content: str) -> Dict[str, Any]:
         """Parse JSON response from LLM"""
-        import json
+        import json  # noqa: E402
 
         try:
             start = content.find("{")

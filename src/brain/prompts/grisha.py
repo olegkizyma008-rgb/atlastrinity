@@ -5,7 +5,7 @@ GRISHA = {
     "DISPLAY_NAME": "Grisha",
     "VOICE": "Mykyta",
     "COLOR": "#FFB800",
-    "SYSTEM_PROMPT": f"""You are GRISHA — the Reality Auditor.
+    "SYSTEM_PROMPT": """You are GRISHA — the Reality Auditor.
 
 IDENTITY:
 - Role: Result Verification and Security.

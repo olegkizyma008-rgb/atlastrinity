@@ -3,13 +3,13 @@ Centralized Prompts Configuration for AtlasTrinity Agents.
 This module contains all system prompts, personas, and dynamic prompt templates.
 """
 
+# Deprecation: this compatibility wrapper remains for backward compatibility.
+# Prefer importing modular prompts from `brain.prompts` package (e.g., `from brain.prompts import ATLAS`).
+import warnings
 from typing import Any, Dict
 
 from .config import WORKSPACE_DIR
 
-# Deprecation: this compatibility wrapper remains for backward compatibility.
-# Prefer importing modular prompts from `brain.prompts` package (e.g., `from brain.prompts import ATLAS`).
-import warnings
 warnings.warn(
     "src.brain.prompts is deprecated - use the modular `brain.prompts` package (ATLAS/TETYANA/GRISHA) instead",
     DeprecationWarning,
@@ -17,7 +17,7 @@ warnings.warn(
 )
 
 # Sourced from modular prompt files (keeps backward compatibility)
-from .prompts import DEFAULT_REALM_CATALOG, ATLAS, TETYANA, GRISHA
+from .prompts import ATLAS, DEFAULT_REALM_CATALOG, GRISHA, TETYANA  # noqa: E402
 
 
 class AgentPrompts:
@@ -27,16 +27,19 @@ class AgentPrompts:
     TETYANA = TETYANA
     GRISHA = GRISHA
 
-
     # Dynamic Prompts (Functions/Templates)
 
     @staticmethod
     def tetyana_reasoning_prompt(
         step: str, context: dict, tools_summary: str = "", feedback: str = ""
     ) -> str:
-        feedback_section = f"\n        PREVIOUS REJECTION FEEDBACK (from Grisha):\n        {feedback}\n" if feedback else ""
-        
-        return f"""Analyze how to execute this atomic step: {step}.
+        feedback_section = (
+            f"\n        PREVIOUS REJECTION FEEDBACK (from Grisha):\n        {feedback}\n"
+            if feedback
+            else ""
+        )
+
+        return """Analyze how to execute this atomic step: {step}.
 
         CONTEXT: {context}
         {feedback_section}
@@ -58,7 +61,7 @@ class AgentPrompts:
     def tetyana_reflexion_prompt(
         step: str, error: str, history: list, tools_summary: str = ""
     ) -> str:
-        return f"""Analysis of Failure: {error}.
+        return """Analysis of Failure: {error}.
 
         Step: {step}
         History of attempts: {history}
@@ -78,7 +81,7 @@ class AgentPrompts:
 
     @staticmethod
     def tetyana_execution_prompt(step: str, context_results: list) -> str:
-        return f"""Execute this task step: {step}.
+        return """Execute this task step: {step}.
 Current context results: {context_results}
 Respond ONLY with JSON:
 {{
@@ -92,7 +95,7 @@ Respond ONLY with JSON:
     def grisha_strategy_prompt(
         step_action: str, expected_result: str, context: dict, overall_goal: str = ""
     ) -> str:
-        return f"""You are the Verification Strategist.
+        return """You are the Verification Strategist.
 
         OVERALL GOAL: {overall_goal}
         Step: {step_action}
@@ -116,7 +119,7 @@ Respond ONLY with JSON:
         history: list,
         overall_goal: str = "",
     ) -> str:
-        return f"""Verify the result of the following step using MCP tools FIRST, screenshots only when necessary.
+        return """Verify the result of the following step using MCP tools FIRST, screenshots only when necessary.
 
 OVERALL GOAL: {overall_goal}
 STRATEGIC GUIDANCE (Follow this!):
@@ -159,7 +162,7 @@ Example REJECTION response:
 
     @staticmethod
     def grisha_security_prompt(action: str) -> str:
-        return f"""Evaluate security for this action:
+        return """Evaluate security for this action:
 
 Action: {action}
 
