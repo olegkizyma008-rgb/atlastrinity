@@ -417,13 +417,20 @@ class Grisha:
                         f"[GRISHA] Fixed hallucinated server: {data.get('server')} -> {server}"
                     )
 
-                if server == "terminal" and tool in [
-                    "terminal",
-                    "run",
-                    "execute",
-                    "shell",
-                ]:
-                    tool = "execute_command"
+                if server in ["terminal", "macos-use", "computer"]:
+                    if tool in ["terminal", "run", "execute", "shell", "exec"]:
+                        server = "macos-use"
+                        tool = "execute_command"
+                    elif tool in ["screenshot", "take_screenshot", "capture"]:
+                        server = "macos-use"
+                        tool = "macos-use_take_screenshot"
+                    elif tool in ["vision", "analyze", "ocr", "scan"]:
+                        server = "macos-use"
+                        tool = "macos-use_analyze_screen"
+                    elif tool in ["ls", "list", "dir"] and server == "macos-use":
+                        # If it tries to ls via macos-use, it's fine
+                        tool = "execute_command"
+                        args = {"command": f"ls -la {args.get('path', '.')}"}
                 if server == "filesystem":
                     if tool in ["list", "ls", "dir"]:
                         tool = "list_directory"
@@ -769,7 +776,7 @@ Timestamp: {timestamp}
                       # Save to file for consistency with rest of pipeline
                       os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
                       timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                      path = os.path.join(SCREENSHOTS_DIR, f"vision_mcp_{timestamp}.png")
+                      path = os.path.join(SCREENSHOTS_DIR, f"vision_mcp_{timestamp}.jpg")
                       
                       with open(path, "wb") as f:
                           f.write(base64.b64decode(base64_img))

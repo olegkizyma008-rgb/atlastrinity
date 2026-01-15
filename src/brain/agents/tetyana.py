@@ -137,6 +137,74 @@ class Tetyana:
             "required": ["command"],
             "types": {"command": str},
         },
+        "macos-use_scroll_and_traverse": {
+            "required": ["pid", "direction"],
+            "optional": ["amount"],
+            "types": {"pid": int, "direction": str, "amount": (int, float)},
+        },
+        "macos-use_right_click_and_traverse": {
+            "required": ["pid", "x", "y"],
+            "types": {"pid": int, "x": (int, float), "y": (int, float)},
+        },
+        "macos-use_double_click_and_traverse": {
+            "required": ["pid", "x", "y"],
+            "types": {"pid": int, "x": (int, float), "y": (int, float)},
+        },
+        "macos-use_drag_and_drop_and_traverse": {
+            "required": ["pid", "startX", "startY", "endX", "endY"],
+            "types": {"pid": int, "startX": (int, float), "startY": (int, float), "endX": (int, float), "endY": (int, float)},
+        },
+        "macos-use_window_management": {
+            "required": ["pid", "action"],
+            "optional": ["x", "y", "width", "height"],
+            "types": {"pid": int, "action": str, "x": (int, float), "y": (int, float), "width": (int, float), "height": (int, float)},
+        },
+        "scroll": {
+            "required": ["pid", "direction"],
+            "optional": ["amount"],
+            "types": {"pid": int, "direction": str, "amount": (int, float)},
+        },
+        "right_click": {
+            "required": ["pid", "x", "y"],
+            "types": {"pid": int, "x": (int, float), "y": (int, float)},
+        },
+        "double_click": {
+            "required": ["pid", "x", "y"],
+            "types": {"pid": int, "x": (int, float), "y": (int, float)},
+        },
+        "drag_drop": {
+            "required": ["pid", "startX", "startY", "endX", "endY"],
+            "types": {"pid": int, "startX": (int, float), "startY": (int, float), "endX": (int, float), "endY": (int, float)},
+        },
+        "window_mgmt": {
+            "required": ["pid", "action"],
+            "optional": ["x", "y", "width", "height"],
+            "types": {"pid": int, "action": str, "x": (int, float), "y": (int, float), "width": (int, float), "height": (int, float)},
+        },
+        "macos-use_set_clipboard": {
+            "required": ["text"],
+            "types": {"text": str},
+        },
+        "macos-use_get_clipboard": {
+            "required": [],
+            "types": {},
+        },
+        "macos-use_system_control": {
+            "required": ["action"],
+            "types": {"action": str},
+        },
+        "set_clipboard": {
+            "required": ["text"],
+            "types": {"text": str},
+        },
+        "get_clipboard": {
+            "required": [],
+            "types": {},
+        },
+        "system_control": {
+            "required": ["action"],
+            "types": {"action": str},
+        },
     }
 
     NAME = AgentPrompts.TETYANA["NAME"]
@@ -1410,6 +1478,21 @@ Please type your response below and press Enter:
                     "analyze_screen": "macos-use_analyze_screen",
                     "ocr": "macos-use_analyze_screen",
                     "scan": "macos-use_analyze_screen",
+                    "scroll": "macos-use_scroll_and_traverse",
+                    "right_click": "macos-use_right_click_and_traverse",
+                    "double_click": "macos-use_double_click_and_traverse",
+                    "drag_drop": "macos-use_drag_and_drop_and_traverse",
+                    "window_mgmt": "macos-use_window_management",
+                    "minimize": "macos-use_window_management",
+                    "maximize": "macos-use_window_management",
+                    "resize": "macos-use_window_management",
+                    "move": "macos-use_window_management",
+                    "set_clipboard": "macos-use_set_clipboard",
+                    "get_clipboard": "macos-use_get_clipboard",
+                    "clipboard": "macos-use_get_clipboard",
+                    "system_control": "macos-use_system_control",
+                    "media": "macos-use_system_control",
+                    "volume": "macos-use_system_control",
                 }
                 if tool in tool_map:
                     logger.info(f"[TETYANA] Auto-mapping tool '{tool}' -> '{tool_map[tool]}'")

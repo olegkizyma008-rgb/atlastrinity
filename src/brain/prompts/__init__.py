@@ -104,8 +104,11 @@ class AgentPrompts:
         Expected Result: {expected_result}
 
         Create a verification strategy:
-        1. VISION FIRST: What should I see on the screenshot to confirm success?
-        2. TOOL FALLBACK: If the screen is not enough, what MCP tool (ls, grep, etc.) should I use?
+        1. VISION: Use 'macos-use_take_screenshot' for UI layout.
+        2. OCR/TEXT: Use 'macos-use_analyze_screen' for text on screen.
+        3. SYSTEM: Use MCP tools (filesystem, terminal) for system data.
+        
+        Prefer native 'macos-use' tools for macOS interface checks.
 
         Strategy:
         """
@@ -141,7 +144,8 @@ class AgentPrompts:
     3. ONLY use screenshots for visual/UI verification when explicitly needed
 
     Analyze the current situation. If you can verify using MCP tools, do that first.
-    Use 'macos-use_take_screenshot' ONLY when you need to verify visual elements, UI, or when explicitly mentioned in expected result.
+    Use 'macos-use_take_screenshot' for visual UI verification.
+    Use 'macos-use_analyze_screen' for screen text (OCR) analysis.
     
     TRUST THE TOOLS:
     - If an MCP tool (like terminal, filesystem) returns a success result (lines, file content, process ID), ACCEPT IT.

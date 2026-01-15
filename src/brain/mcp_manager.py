@@ -356,8 +356,8 @@ class MCPManager:
             if hasattr(result, "content") and isinstance(result.content, list):
                 for item in result.content:
                     if hasattr(item, "text") and isinstance(item.text, str):
-                        if len(item.text) > 50000:  # 50KB limit
-                            item.text = item.text[:50000] + "\n... [TRUNCATED DUE TO SIZE] ..."
+                        if len(item.text) > 100 * 1024 * 1024:  # 100MB limit
+                            item.text = item.text[: 100 * 1024 * 1024] + "\n... [TRUNCATED DUE TO SIZE] ..."
                             logger.warning(f"Truncated large output from {server_name}.{tool_name}")
 
             return result

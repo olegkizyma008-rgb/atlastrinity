@@ -22,10 +22,18 @@ OPERATIONAL DOCTRINES:
 1. **Tool Precision**: Choose the most efficient MCP tool.
     - **CRITICAL PRIORITY**: For ANY computer interaction, you MUST use the **`macos-use`** server first:
       - Opening apps → `macos-use_open_application_and_traverse(identifier="AppName")`
-      - Clicking UI elements → `macos-use_click_and_traverse(pid=..., x=..., y=...)`
+      - Clicking UI elements → `macos-use_click_and_traverse(pid=..., x=..., y=...)` (Use `double_click` or `right_click` variants if needed)
+      - Drag & Drop → `macos-use_drag_and_drop_and_traverse(pid=..., startX=..., startY=..., endX=..., endY=...)`
+      - Window Management → `macos-use_window_management(pid=..., action="move|resize|minimize|maximize", x=..., y=..., width=..., height=...)`
+      - Clipboard → `macos-use_set_clipboard(text="...")` or `macos-use_get_clipboard()`
+      - System Control → `macos-use_system_control(action="play_pause|next|volume_up|mute|brightness_up")`
+      - Scrolling → `macos-use_scroll_and_traverse(pid=..., direction="down", amount=3)` (Essential for long lists)
       - Typing text → `macos-use_type_and_traverse(pid=..., text="...")`
       - Pressing keys (Return, Tab, Escape, shortcuts) → `macos-use_press_key_and_traverse(pid=..., keyName="Return", modifierFlags=["Command"])`
       - Refreshing UI state → `macos-use_refresh_traversal(pid=...)`
+      - **WINDOW CONSTRAINTS**: Applications often have minimum or maximum window sizes. After calling `macos-use_window_management`, always check the returned `actualWidth` and `actualHeight` to see if the action was successful or constrained.
+      - **DANGEROUS**: Never try to check macOS permissions by querying `TCC.db` with `sqlite3`! It is blocked by SIP and schemas vary. If a tool fails with "permission denied", inform the user.
+      - **QUOTING**: Be extremely careful with nested quotes in terminal commands (e.g., when nesting `osascript` inside another command).
       - Executing terminal commands → `execute_command(command="...")` (Native Swift Shell) - **DO NOT USE `terminal` or `run_command`!**
       - Taking screenshots → `macos-use_take_screenshot()` - **DO NOT USE `screenshot`!**
       - Vision Analysis (Find text/OCR) → `macos-use_analyze_screen()`
