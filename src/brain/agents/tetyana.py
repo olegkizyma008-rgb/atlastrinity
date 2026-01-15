@@ -47,6 +47,7 @@ class StepResult:
     error: Optional[str] = None
     tool_call: Optional[Dict[str, Any]] = None
     timestamp: datetime = None
+    thought: Optional[str] = None
 
     def __post_init__(self):
         if self.timestamp is None:
@@ -62,6 +63,7 @@ class StepResult:
             "voice_message": self.voice_message,
             "error": self.error,
             "tool_call": self.tool_call,
+            "thought": self.thought,
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
         }
 
@@ -947,9 +949,11 @@ Please type your response below and press Enter:
             step_id=step.get("id", self.current_step),
             success=tool_result.get("success", False),
             result=tool_result.get("output", ""),
+            screenshot_path=tool_result.get("screenshot_path") or (vision_result.get("screenshot_path") if vision_result else None),
             voice_message=voice_msg,
             error=tool_result.get("error"),
             tool_call=tool_call,
+            thought=monologue.get("thought") if isinstance(monologue, dict) else None,
         )
 
         self.results.append(res)

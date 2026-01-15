@@ -429,6 +429,7 @@ class Grisha:
                 context_info,
                 verification_history,
                 overall_goal=overall_goal,
+                tetyana_thought=getattr(result, "thought", "") if not isinstance(result, dict) else result.get("thought", ""),
             )
             content.append({"type": "text", "text": prompt_text})
 

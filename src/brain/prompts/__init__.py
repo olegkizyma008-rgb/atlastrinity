@@ -124,6 +124,7 @@ class AgentPrompts:
         context_info: dict,
         history: list,
         overall_goal: str = "",
+        tetyana_thought: str = "",
     ) -> str:
         return f"""Verify the result of the following step using MCP tools FIRST, screenshots only when necessary.
 
@@ -134,6 +135,9 @@ class AgentPrompts:
     Step {step_id}: {step_action}
     Expected Result: {expected}
     Actual Output/Result: {actual}
+    
+    TETYANA'S INTENT (Monologue from execution):
+    {tetyana_thought or "No thought documented."}
 
     Shared Context (for correct paths and global situation): {context_info}
 
@@ -149,8 +153,9 @@ class AgentPrompts:
     Use 'macos-use_analyze_screen' for screen text (OCR) analysis.
     
     TRUST THE TOOLS:
-    - If an MCP tool (like terminal, filesystem) returns a success result (lines, file content, process ID), ACCEPT IT.
-    - Do NOT reject technical success just because you didn't see it visually.
+    - If an MCP tool returns a success result (process ID, file content, search results), ACCEPT IT.
+    - REASONING TOOLS: If 'sequential-thinking' or 'vibe_ask' provides a thought process or analysis, TRUST IT as proof of execution for logic-based steps.
+    - Do NOT reject technical success just because you didn't see it visually on a screenshot.
     - If the goal was to kill a process and 'pgrep' returns nothing, that is SUCCESS.
 
     Respond STRICTLY in JSON.
