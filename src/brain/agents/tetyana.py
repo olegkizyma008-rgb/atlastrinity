@@ -192,7 +192,8 @@ class Tetyana:
         },
         "macos-use_set_clipboard": {
             "required": ["text"],
-            "types": {"text": str},
+            "optional": ["showAnimation", "animationDuration"],
+            "types": {"text": str, "showAnimation": bool, "animationDuration": (int, float)},
         },
         "macos-use_get_clipboard": {
             "required": [],
@@ -204,7 +205,8 @@ class Tetyana:
         },
         "set_clipboard": {
             "required": ["text"],
-            "types": {"text": str},
+            "optional": ["showAnimation", "animationDuration"],
+            "types": {"text": str, "showAnimation": bool, "animationDuration": (int, float)},
         },
         "get_clipboard": {
             "required": [],
@@ -213,6 +215,40 @@ class Tetyana:
         "system_control": {
             "required": ["action"],
             "types": {"action": str},
+        },
+        "vibe_prompt": {
+            "required": ["prompt"],
+            "optional": ["cwd", "timeout_s", "output_format", "auto_approve", "max_turns"],
+            "types": {"prompt": str, "cwd": str, "timeout_s": (int, float), "output_format": str, "auto_approve": bool, "max_turns": int},
+        },
+        "vibe_analyze_error": {
+            "required": ["error_message"],
+            "optional": ["log_context", "file_path", "cwd", "timeout_s", "auto_fix"],
+            "types": {"error_message": str, "log_context": str, "file_path": str, "cwd": str, "timeout_s": (int, float), "auto_fix": bool},
+        },
+        "vibe_code_review": {
+            "required": ["file_path"],
+            "optional": ["focus_areas", "cwd", "timeout_s"],
+            "types": {"file_path": str, "focus_areas": str, "cwd": str, "timeout_s": (int, float)},
+        },
+        "vibe_smart_plan": {
+            "required": ["objective"],
+            "optional": ["context", "cwd", "timeout_s"],
+            "types": {"objective": str, "context": str, "cwd": str, "timeout_s": (int, float)},
+        },
+        "vibe_ask": {
+            "required": ["question"],
+            "optional": ["cwd", "timeout_s"],
+            "types": {"question": str, "cwd": str, "timeout_s": (int, float)},
+        },
+        "restart_mcp_server": {
+            "required": ["server_name"],
+            "types": {"server_name": str},
+        },
+        "query_db": {
+            "required": ["query"],
+            "optional": ["params"],
+            "types": {"query": str, "params": dict},
         },
     }
 
@@ -654,9 +690,9 @@ Please type your response below and press Enter:
             grisha_feedback = await self.get_grisha_feedback(step.get("id")) or ""
 
         target_server = step.get("realm") or step.get("tool") or step.get("server")
-        # Normalize generic 'browser' realm to concrete puppeteer server when available
+        # Normalize generic 'browser' realm to macos-use to leverage native automation
         if target_server == "browser":
-            target_server = "puppeteer"
+            target_server = "macos-use"
         tools_summary = ""
         monologue = {}
 
@@ -966,6 +1002,31 @@ Please type your response below and press Enter:
                 tool_name = action_raw
                 logger.info(f"[TETYANA] Using action as tool: {tool_name}")
 
+        # --- INTERNAL SYSTEM TOOLS ---
+        if tool_name in ["restart_mcp_server", "restart_server", "reboot_mcp"]:
+            from ..mcp_manager import mcp_manager
+            target = args.get("server_name") or args.get("name")
+            if target:
+                success = await mcp_manager.restart_server(target)
+                return {
+                    "success": success,
+                    "output": f"MCP Server '{target}' has been restarted.",
+                    "voice_message": f"Перезавантажую сервер {target}."
+                }
+            return {"success": False, "error": "Missing 'server_name' argument."}
+
+        if tool_name in ["query_db", "database_query", "sql_query"]:
+             from ..mcp_manager import mcp_manager
+             query = args.get("query")
+             if query:
+                 results = await mcp_manager.query_db(query, args.get("params"))
+                 return {
+                     "success": True,
+                     "output": f"Query Results: {json.dumps(results, indent=2)}",
+                     "voice_message": "Виконую запит до бази даних."
+                 }
+             return {"success": False, "error": "Missing 'query' argument."}
+
         # --- UNIVERSAL TOOL SYNONYMS & INTENT ---
         terminal_synonyms = [
             "terminal",
@@ -1168,7 +1229,7 @@ Please type your response below and press Enter:
         explicit_server = tool_call.get("server")
         # Normalize common aliases
         if explicit_server == "browser":
-            explicit_server = "puppeteer"
+            explicit_server = "macos-use"
             tool_call["server"] = explicit_server
 
         if explicit_server:
@@ -1193,72 +1254,22 @@ Please type your response below and press Enter:
             # If this was a puppeteer/browser call that navigated or clicked, try to collect
             # verification artifacts (title, HTML, screenshot) so Grisha can verify the step.
             try:
-                if explicit_server in ("puppeteer", "browser"):
-                    action_hint = args.get("action") or ""
+                if explicit_server in ("macos-use", "browser"):
+                    # Check if action was a browser-like navigation
                     if (
-                        tool_name in ("puppeteer_navigate", "navigate")
-                        or action_hint in ("navigate", "open")
+                        tool_name in ("macos-use_open_application_and_traverse")
                         or tool_name.endswith("navigate")
                     ):
                         # small delay to allow rendering
                         await asyncio.sleep(1.5)
                         from ..logger import logger  # noqa: E402
-
-                        # from ..mcp_manager import mcp_manager  # noqa: E402
-
                         logger.info(
-                            f"[TETYANA] (explicit dispatch) Collecting browser artifacts for step {args.get('step_id')}"
+                            f"[TETYANA] (explicit dispatch) Collecting artifacts for step {args.get('step_id')}"
                         )
-
-                        # Document title
-                        title_res = await mcp_manager.call_tool(
-                            "puppeteer", "puppeteer_evaluate", {"script": "document.title"}
-                        )
-                        title_text = None
-                        if (
-                            hasattr(title_res, "content")
-                            and len(title_res.content) > 0
-                            and hasattr(title_res.content[0], "text")
-                        ):
-                            title_text = title_res.content[0].text
-
-                        # Page HTML
-                        html_res = await mcp_manager.call_tool(
-                            "puppeteer",
-                            "puppeteer_evaluate",
-                            {"script": "document.documentElement.outerHTML"},
-                        )
-                        html_text = None
-                        if (
-                            hasattr(html_res, "content")
-                            and len(html_res.content) > 0
-                            and hasattr(html_res.content[0], "text")
-                        ):
-                            html_text = html_res.content[0].text
-
-                        # Screenshot (base64)
-                        shot_res = await mcp_manager.call_tool(
-                            "puppeteer",
-                            "puppeteer_screenshot",
-                            {"name": f"grisha_step_{args.get('step_id')}", "encoded": True},
-                        )
-                        screenshot_b64 = None
-                        if hasattr(shot_res, "content"):
-                            for c in shot_res.content:
-                                if getattr(c, "type", "") == "image" and hasattr(c, "data"):
-                                    screenshot_b64 = c.data
-                                    break
-                                if hasattr(c, "text") and c.text:
-                                    txt = c.text.strip()
-                                    if txt.startswith("iVBOR"):
-                                        screenshot_b64 = txt
-                                        break
-                                    if "base64," in txt:
-                                        try:
-                                            screenshot_b64 = txt.split("base64,", 1)[1]
-                                            break
-                                        except Exception:
-                                            pass
+                        # We use native screenshot for verification instead of puppeteer
+                        shot_path = await self._take_screenshot_for_vision()
+                        if shot_path:
+                            logger.info(f"[TETYANA] Saved screenshot artifact via macos-use: {shot_path}")
 
                         # Save artifacts (inline to avoid refactor)
                         try:
@@ -1417,6 +1428,30 @@ Please type your response below and press Enter:
                 
                 if mcp_tool in ["analyze", "vision", "ocr", "analyze_screen"]:
                     mcp_tool = "macos-use_analyze_screen"
+
+                if mcp_tool in ["right_click", "right_click_and_traverse"]:
+                    mcp_tool = "macos-use_right_click_and_traverse"
+                
+                if mcp_tool in ["double_click", "double_click_and_traverse"]:
+                    mcp_tool = "macos-use_double_click_and_traverse"
+
+                if mcp_tool in ["drag_drop", "drag_and_drop", "drag_and_drop_and_traverse"]:
+                    mcp_tool = "macos-use_drag_and_drop_and_traverse"
+
+                if mcp_tool in ["scroll", "scroll_and_traverse"]:
+                    mcp_tool = "macos-use_scroll_and_traverse"
+
+                if mcp_tool in ["window_management", "window_mgmt"]:
+                    mcp_tool = "macos-use_window_management"
+
+                if mcp_tool in ["set_clipboard", "clipboard_set", "copy"]:
+                    mcp_tool = "macos-use_set_clipboard"
+
+                if mcp_tool in ["get_clipboard", "clipboard_get", "paste"]:
+                    mcp_tool = "macos-use_get_clipboard"
+
+                if mcp_tool in ["system_control", "media_control", "volume", "brightness"]:
+                    mcp_tool = "macos-use_system_control"
 
             # Common server-to-default-tool mappings
             default_map = {

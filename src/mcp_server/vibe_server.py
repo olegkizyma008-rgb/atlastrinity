@@ -621,27 +621,5 @@ async def vibe_ask(
     return result
 
 
-@server.tool()
-async def vibe_restart_mcp_server(server_name: str) -> Dict[str, Any]:
-    """
-    Restart a specific MCP server (e.g., 'macos-use', 'filesystem').
-    Use this after modifying source code or fixing a crash.
-    """
-    from ..brain.mcp_manager import mcp_manager
-    success = await mcp_manager.restart_server(server_name)
-    return {"success": success, "restarted": server_name}
-
-
-@server.tool()
-async def vibe_query_db(query: str, params: Optional[Dict] = None) -> Dict[str, Any]:
-    """
-    Query the internal AtlasTrinity database (PostgreSQL).
-    Tables: tasks, task_steps, tool_executions, logs, kg_nodes, kg_edges.
-    """
-    from ..brain.mcp_manager import mcp_manager
-    results = await mcp_manager.query_db(query, params)
-    return {"success": True, "results": results}
-
-
 if __name__ == "__main__":
     server.run()

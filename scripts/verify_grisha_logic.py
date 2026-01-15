@@ -13,7 +13,7 @@ async def test_strategy_planning():
     print("Initializing Grisha...")
     grisha = Grisha()
 
-    context = {"cwd": "/Users/olegkizyma", "os": "macOS"}
+    context = {"cwd": os.path.expanduser("~"), "os": "macOS"}
 
     task_action = "Remove the application Rectangle.app from /Applications"
     expected_result = "Application is removed and no longer running."

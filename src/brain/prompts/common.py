@@ -6,19 +6,25 @@ DEFAULT_REALM_CATALOG = """
 AVAILABLE REALMS (MCP Servers):
 
 TIER 1 - CORE:
-- terminal: Shell access. Tool: execute_command.
 - filesystem: File operations. Tools: read_file, write_file, list_directory.
-- macos-use: **PRIORITY SWIFT BINARY** - Native macOS control for ALL computer interaction.
+- macos-use: **PRIORITY NATIVE COMMANDER** (Swift binary).
   Tools:
     - `macos-use_open_application_and_traverse`: Open apps. Args: identifier (app name/path/bundleID)
     - `macos-use_click_and_traverse`: Click at coordinates. Args: pid (int), x (float), y (float)
+    - `macos-use_right_click_and_traverse`: Context menu click. Args: pid (int), x (float), y (float)
+    - `macos-use_double_click_and_traverse`: Double click. Args: pid (int), x (float), y (float)
+    - `macos-use_drag_and_drop_and_traverse`: Drag and drop. Args: pid (int), startX, startY, endX, endY
     - `macos-use_type_and_traverse`: Type text. Args: pid (int), text (string)
-    - `macos-use_press_key_and_traverse`: Press keys. Args: pid (int), keyName (string), modifierFlags (optional array like ["Command", "Shift"])
-    - `macos-use_refresh_traversal`: Refresh UI tree. Args: pid (int)
-    - `macos-use_take_screenshot`: Native macOS Screenshot. Returns Base64 PNG. No args.
-    - `macos-use_analyze_screen`: Apple Vision OCR. Returns text/coordinates JSON. No args.
-    - `execute_command`: Native Terminal. Args: command (string)
-  ALWAYS use this server for GUI automation and Terminal - it is compiled Swift and runs locally!
+    - `macos-use_press_key_and_traverse`: Press keys/shortcuts. Args: pid (int), keyName (string), modifierFlags (array)
+    - `macos-use_scroll_and_traverse`: Scroll. Args: pid (int), direction (up/down/left/right), amount (int)
+    - `macos-use_refresh_traversal`: Force refresh UI tree. Args: pid (int)
+    - `macos-use_window_management`: Move/Resize/Min/Max. Args: pid (int), action (move/resize/minimize/maximize/make_front)
+    - `macos-use_set_clipboard` / `macos-use_get_clipboard`: Clipboard access.
+    - `macos-use_system_control`: Media/Volume/Brightness. Args: action (play_pause, volume_up, etc.)
+    - `macos-use_take_screenshot`: Native Screenshot (Alias: `screenshot`). Returns Base64.
+    - `macos-use_analyze_screen`: Apple Vision OCR (Alias: `ocr`, `analyze`).
+    - `execute_command`: **PRIMARY TERMINAL**. Native Swift Shell (Alias: `terminal`, `sh`, `bash`).
+  ALWAYS use `macos-use` for ALL GUI automation and Terminal interactions. It is a compiled Swift binary running locally!
 - sequential-thinking: Step-by-step reasoning for complex decisions.
 
 TIER 2 - HIGH PRIORITY:
@@ -100,12 +106,17 @@ AVAILABLE VIBE TOOLS:
    Purpose: Check Vibe CLI installation path and version
    Example: vibe_which()
 
+TRINITY NATIVE SYSTEM TOOLS (Any Agent):
+- `restart_mcp_server(server_name)`: Force restart an MCP server.
+- `query_db(query, params)`: Query the internal system database.
+
 WHEN TO USE VIBE:
 - When Tetyana/Grisha fail after multiple attempts
 - Complex debugging requiring AI reasoning
 - Code review before committing
 - Planning multi-step implementations
 - Understanding unfamiliar code patterns
+- System diagnostics
 
 IMPORTANT: All Vibe output is logged and visible in the Electron app logs!
 """

@@ -266,6 +266,65 @@ class Grisha:
         """
         return await mcp_manager.call_tool(server, tool, args)
 
+    def _summarize_ui_data(self, raw_data: str) -> str:
+        """
+        Intelligently extracts the 'essence' of UI traversal data locally.
+        Reduces thousands of lines of JSON to a concise list of key interactive elements.
+        """
+        import json
+        if not raw_data or not isinstance(raw_data, str) or not (raw_data.strip().startswith('{') or raw_data.strip().startswith('[')):
+            return raw_data
+
+        try:
+            data = json.loads(raw_data)
+            # Find the list of elements (robust to various nesting levels)
+            elements = []
+            if isinstance(data, list):
+                elements = data
+            elif isinstance(data, dict):
+                # Search common keys: 'elements', 'result', etc.
+                if "elements" in data: elements = data["elements"]
+                elif "result" in data and isinstance(data["result"], dict):
+                    elements = data["result"].get("elements", [])
+                elif "result" in data and isinstance(data["result"], list):
+                    elements = data["result"]
+
+            if not elements or not isinstance(elements, list):
+                return raw_data[:2000] # Fallback to truncation
+
+            summary_items = []
+            for el in elements:
+                if not isinstance(el, dict): continue
+                
+                # Filter: Only care about visible or important elements to save tokens
+                if el.get("isVisible") is False and not el.get("label") and not el.get("title"):
+                    continue
+                
+                role = el.get("role", "element")
+                label = el.get("label") or el.get("title") or el.get("description") or el.get("help")
+                value = el.get("value") or el.get("stringValue")
+                
+                # Only include if it has informative content
+                if label or value or role in ["AXButton", "AXTextField", "AXTextArea", "AXCheckBox"]:
+                    item = f"[{role}"
+                    if label: item += f": '{label}'"
+                    if value: item += f", value: '{value}'"
+                    item += "]"
+                    summary_items.append(item)
+            
+            summary = " | ".join(summary_items)
+            
+            # Final check: if summary is still somehow empty but we had elements, 
+            # maybe we were too aggressive. Provide a tiny slice of raw.
+            if not summary and elements:
+                return f"UI Tree Summary: {len(elements)} elements found. Samples: {str(elements[:2])}"
+                
+            return f"UI Summary ({len(elements)} elements): " + summary
+            
+        except Exception as e:
+            logger.debug(f"[GRISHA] UI summarization failed (falling back to truncation): {e}")
+            return raw_data[:3000]
+
     async def verify_step(
         self,
         step: Dict[str, Any],
@@ -336,11 +395,18 @@ class Grisha:
         context_info = shared_context.to_dict()
 
         if hasattr(result, "result") and not isinstance(result, dict):
-            actual = result.result
+            actual_raw = str(result.result)
         elif isinstance(result, dict):
-            actual = result.get("result", result.get("output", ""))
+            actual_raw = str(result.get("result", result.get("output", "")))
         else:
-            actual = str(result)
+            actual_raw = str(result)
+
+        # NEW: Intelligent local summarization instead of simple truncation
+        actual = self._summarize_ui_data(actual_raw)
+        
+        # Double safety truncation for the final string sent to LLM
+        if len(actual) > 8000:
+            actual = actual[:8000] + "...(truncated for brevity)"
 
         # 1. PLAN STRATEGY with Raptor-Mini
         strategy_context = await self._plan_verification_strategy(
@@ -372,12 +438,31 @@ class Grisha:
                 and (attempt == 0 or attach_screenshot_next)
             ):
                 with open(screenshot_path, "rb") as f:
-                    image_data = base64.b64encode(f.read()).decode("utf-8")
+                    img_bytes = f.read()
+                    
+                # OPTIMIZATION: If image is too large (> 500KB), compress it for the prompt
+                if len(img_bytes) > 500 * 1024:
+                    try:
+                        from PIL import Image
+                        import io
+                        img = Image.open(io.BytesIO(img_bytes))
+                        # Convert to RGB if necessary
+                        if img.mode != "RGB":
+                            img = img.convert("RGB")
+                        
+                        # Limit max dimensions to 1024px for faster/cheaper vision
+                        img.thumbnail((1024, 1024), Image.LANCZOS)
+                        
+                        output = io.BytesIO()
+                        img.save(output, format="JPEG", quality=70, optimize=True)
+                        img_bytes = output.getvalue()
+                        logger.info(f"[GRISHA] Compressed screenshot for prompt: {len(img_bytes)} bytes")
+                    except Exception as e:
+                        logger.warning(f"[GRISHA] Failed to compress screenshot: {e}")
 
-                mime = "image/png"
-                sp = screenshot_path.lower()
-                if sp.endswith(".jpg") or sp.endswith(".jpeg"):
-                    mime = "image/jpeg"
+                image_data = base64.b64encode(img_bytes).decode("utf-8")
+
+                mime = "image/jpeg" # We force JPEG after compression
                 content.append(
                     {
                         "type": "image_url",
@@ -554,11 +639,16 @@ class Grisha:
                     tool_output = f"Error calling tool: {e}"
                     logger.error(f"[GRISHA] Tool Error: {e}")
 
+                # Truncate large tool outputs to prevent context window overflow
+                result_str = str(tool_output)
+                if len(result_str) > 1000:
+                    result_str = result_str[:1000] + "...(truncated)"
+
                 verification_history.append(
                     {
                         "tool": f"{server}.{tool}",
                         "args": args,
-                        "result": str(tool_output),
+                        "result": result_str,
                     }
                 )
                 continue

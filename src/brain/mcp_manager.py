@@ -41,6 +41,8 @@ except ImportError:  # pragma: no cover
 from .config import MCP_DIR  # noqa: E402
 from .config_loader import config  # noqa: E402
 from .logger import logger  # noqa: E402
+from .db.manager import db_manager  # noqa: E402
+from sqlalchemy import text  # noqa: E402
 
 
 class MCPManager:
@@ -688,6 +690,12 @@ class MCPManager:
 
     async def query_db(self, query: str, params: Optional[Dict] = None) -> List[Dict]:
         """Execute a raw SQL query (for debugging/self-healing)"""
+        if not db_manager.available:
+            try:
+                await db_manager.initialize()
+            except Exception as e:
+                return [{"error": f"Database initialization failed: {e}"}]
+        
         if not db_manager.available:
             return [{"error": "Database not available"}]
         

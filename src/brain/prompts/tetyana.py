@@ -24,9 +24,9 @@ OPERATIONAL DOCTRINES:
       - Opening apps → `macos-use_open_application_and_traverse(identifier="AppName")`
       - Clicking UI elements → `macos-use_click_and_traverse(pid=..., x=..., y=...)` (Use `double_click` or `right_click` variants if needed)
       - Drag & Drop → `macos-use_drag_and_drop_and_traverse(pid=..., startX=..., startY=..., endX=..., endY=...)`
-      - Window Management → `macos-use_window_management(pid=..., action="move|resize|minimize|maximize", x=..., y=..., width=..., height=...)`
+      - Window Management → `macos-use_window_management(pid=..., action="move|resize|minimize|maximize|make_front", x=..., y=..., width=..., height=...)`
       - Clipboard → `macos-use_set_clipboard(text="...")` or `macos-use_get_clipboard()`
-      - System Control → `macos-use_system_control(action="play_pause|next|volume_up|mute|brightness_up")`
+      - System Control → `macos-use_system_control(action="play_pause|next|previous|volume_up|volume_down|mute|brightness_up|brightness_down")`
       - Scrolling → `macos-use_scroll_and_traverse(pid=..., direction="down", amount=3)` (Essential for long lists)
       - Typing text → `macos-use_type_and_traverse(pid=..., text="...")`
       - Pressing keys (Return, Tab, Escape, shortcuts) → `macos-use_press_key_and_traverse(pid=..., keyName="Return", modifierFlags=["Command"])`
@@ -48,17 +48,15 @@ DEEP THINKING (Sequential Thinking):
 For complex, multi-step sub-tasks that require detailed planning or recursive thinking (branching logic, hypothesis testing), use:
 - **sequential-thinking**: Call tool `sequentialthinking` to decompose the problem into a thought sequence. Use this BEFORE executing technical steps if the action is ambiguous or highly complex.
 
+TRINITY NATIVE SYSTEM TOOLS (Self-Healing & Maintenance):
+For system recovery and diagnostics, use these internal tools directly:
+- **restart_mcp_server(server_name="...")**: If an MCP server (e.g., `macos-use`, `vibe`) is unresponsive, crashing, or throwing persistent authentication errors, RESTART it immediately.
+- **query_db(query="...", params={...})**: If you need to verify system state, task logs, or diagnostic information that's not available via other tools, query the internal AtlasTrinity PostgreSQL database.
+
 SELF-HEALING WITH VIBE:
-When you encounter persistent errors (after 2+ failed attempts), you can delegate to the VIBE AI:
-
-- **vibe_analyze_error**: For deep error analysis and auto-fixing
-  Usage: vibe_analyze_error(error_message="...", log_context="...", auto_fix=True)
-  
-- **vibe_prompt**: For any complex debugging query
-  Usage: vibe_prompt(prompt="Analyze why this command fails: ...", cwd="/path")
-
-- **vibe_code_review**: Before modifying critical files
-  Usage: vibe_code_review(file_path="/src/critical.py")
+1. **vibe_analyze_error**: Use for deep error analysis and auto-fixing of project code.
+2. **vibe_prompt**: For any complex debugging query.
+3. **vibe_code_review**: Before modifying critical files to ensure quality.
 
 Vibe runs in CLI mode - all output is visible in logs!
 

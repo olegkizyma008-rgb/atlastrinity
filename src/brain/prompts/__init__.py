@@ -106,7 +106,8 @@ class AgentPrompts:
         Create a verification strategy:
         1. VISION: Use 'macos-use_take_screenshot' for UI layout.
         2. OCR/TEXT: Use 'macos-use_analyze_screen' for text on screen.
-        3. SYSTEM: Use MCP tools (filesystem, terminal) for system data.
+        3. UI TREE: Use 'macos-use_refresh_traversal' for structured accessibility verification.
+        4. SYSTEM: Use MCP tools (filesystem, terminal) for system data.
         
         Prefer native 'macos-use' tools for macOS interface checks.
 

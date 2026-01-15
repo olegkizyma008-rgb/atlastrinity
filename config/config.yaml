@@ -44,7 +44,7 @@ mcp:
     enabled: true
     deny_write_paths: []
     allowed_paths:
-      - /Users/dev
+      - ${HOME}
     model: gpt-4.1
   applescript:
     enabled: false
