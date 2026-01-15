@@ -416,6 +416,7 @@ class Atlas:
                 else ""
             ),
             vibe_directive,
+            str(shared_context.to_dict()),
         )
 
         messages = [

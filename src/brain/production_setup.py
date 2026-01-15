@@ -19,43 +19,16 @@ import sys
 from pathlib import Path
 from typing import Any, Dict
 
-from .config import CONFIG_ROOT, MCP_DIR, MODELS_DIR, WHISPER_DIR
+from .config import CONFIG_ROOT, MCP_DIR, MODELS_DIR, WHISPER_DIR, deep_merge
 
 # Try to import yaml
 try:
     import yaml
 
+    # PyYAML has been moved to a separate package in some environments
     YAML_AVAILABLE = True
 except ImportError:
     YAML_AVAILABLE = False
-
-
-def deep_merge(base: Dict, overlay: Dict) -> Dict:
-    """
-    Глибоке об'єднання двох словників.
-    base - нова структура з bundle (нові ключі)
-    overlay - існуючі значення користувача (пріоритет)
-
-    Результат: структура з base + значення з overlay
-    """
-    result = {}
-    all_keys = set(base.keys()) | set(overlay.keys())
-
-    for key in all_keys:
-        if key in base and key in overlay:
-            if isinstance(base[key], dict) and isinstance(overlay[key], dict):
-                result[key] = deep_merge(base[key], overlay[key])
-            else:
-                # Значення користувача має пріоритет
-                result[key] = overlay[key]
-        elif key in overlay:
-            result[key] = overlay[key]
-        else:
-            # Новий ключ з bundle
-            result[key] = base[key]
-            print(f"[Production Setup] ℹ️  New config key: {key}")
-
-    return result
 
 
 def is_production():

@@ -367,7 +367,7 @@ class MCPManager:
             # Special handling for vibe server - try to auto-enable on errors
             if server_name == "vibe":
                 try:
-                    from ..config_loader import config  # noqa: E402
+                    from .config_loader import config  # noqa: E402
 
                     if not config.get("mcp.vibe.enabled", False):
                         logger.warning("[MCP] Vibe tool failed but server disabled - auto-enabling")
@@ -430,7 +430,7 @@ class MCPManager:
                 logger.warning(f"[MCP] Vibe server unhealthy, attempting auto-enable: {e}")
                 # Try to enable vibe via self-healing
                 try:
-                    from ..config_loader import config  # noqa: E402
+                    from .config_loader import config  # noqa: E402
 
                     if not config.get("mcp.vibe.enabled", False):
                         logger.info("[MCP] Auto-enabling vibe server due to health check failure")

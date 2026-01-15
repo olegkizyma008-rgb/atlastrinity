@@ -226,6 +226,7 @@ class VoiceManager:
         self.is_speaking = False  # Flag to prevent self-listening
         self.last_text = ""  # Last spoken text for echo filtering
         self.last_speak_time = 0.0  # End time of the last agent phrase
+        self._lock = None  # To be initialized in the loop
 
     @property
     def engine(self):
@@ -270,14 +271,19 @@ class VoiceManager:
         """
         Generate and play speech for specific agent
         """
-        if not TTS_AVAILABLE or not text:
-            print(f"[TTS] [{agent_id.upper()}] (Text-only): {text}")
-            return None
+        if self._lock is None:
+            import asyncio
+            self._lock = asyncio.Lock()
 
-        agent_id = agent_id.lower()
-        if agent_id not in AGENT_VOICES:
-            print(f"[TTS] Unknown agent: {agent_id}")
-            return None
+        async with self._lock:
+            if not TTS_AVAILABLE or not text:
+                print(f"[TTS] [{agent_id.upper()}] (Text-only): {text}")
+                return None
+
+            agent_id = agent_id.lower()
+            if agent_id not in AGENT_VOICES:
+                print(f"[TTS] Unknown agent: {agent_id}")
+                return None
 
         # Import Voices and Stress here
         from ukrainian_tts.tts import Stress, Voices

@@ -141,7 +141,7 @@ class AgentPrompts:
     3. ONLY use screenshots for visual/UI verification when explicitly needed
 
     Analyze the current situation. If you can verify using MCP tools, do that first.
-    Use 'macos-use.screenshot' ONLY when you need to verify visual elements, UI, or when explicitly mentioned in expected result.
+    Use 'macos-use_take_screenshot' ONLY when you need to verify visual elements, UI, or when explicitly mentioned in expected result.
     
     TRUST THE TOOLS:
     - If an MCP tool (like terminal, filesystem) returns a success result (lines, file content, process ID), ACCEPT IT.
@@ -228,11 +228,15 @@ Do not suggest creating a plan, just talk."""
         strategy: str,
         catalog: str,
         vibe_directive: str = "",
+        context: str = "",
     ) -> str:
+        context_section = f"\n        ENVIRONMENT & PATHS:\n        {context}\n" if context else ""
+        
         return f"""Create a Master Execution Plan.
 
         REQUEST: {task_text}
         STRATEGY: {strategy}
+        {context_section}
         {vibe_directive}
         {catalog}
 

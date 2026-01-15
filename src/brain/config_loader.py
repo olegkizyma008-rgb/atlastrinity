@@ -14,18 +14,7 @@ except ImportError:  # pragma: no cover
         return {}
 
 
-from .config import CONFIG_ROOT, MCP_DIR, PROJECT_ROOT
-
-
-def deep_merge(base: Dict, overlay: Dict) -> Dict:
-    """Recursively merge overlay into base."""
-    result = base.copy()
-    for key, value in overlay.items():
-        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-            result[key] = deep_merge(result[key], value)
-        else:
-            result[key] = value
-    return result
+from .config import CONFIG_ROOT, MCP_DIR, PROJECT_ROOT, deep_merge
 
 
 class SystemConfig:

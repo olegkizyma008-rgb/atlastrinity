@@ -22,7 +22,6 @@ TIER 1 - CORE:
 - sequential-thinking: Step-by-step reasoning for complex decisions.
 
 TIER 2 - HIGH PRIORITY:
-- puppeteer: Browser automation (navigate, click, type, screenshot).
 - fetch: URL content extraction. Tool: fetch_url.
 - duckduckgo-search: Web search. Tool: search.
 - memory: Knowledge graph access.

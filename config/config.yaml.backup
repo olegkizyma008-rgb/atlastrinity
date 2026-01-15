@@ -1,75 +1,110 @@
-agents:
-  grisha:
-    temperature: 0.3
-    max_tokens: 1500
-    vision_model: gpt-4o
-  tetyana:
-    temperature: 0.5
-    max_tokens: 2000
-    model: gpt-4.1
-  atlas:
-    temperature: 0.7
-    max_tokens: 2000
-    model: raptor-mini
+# AtlasTrinity Configuration (synced from project)
+# Синхронізовано: 2026-01-10 20:02:27
+
+voice:
+  stt:
+    model: large-v3-turbo
+    device: cpu
+    language: uk
+  tts:
+    engine: ukrainian-tts
+    device: cpu
+    enabled: true
+mcp_enhanced:
+  retry_attempts: 3
+  connection_timeout: 30
 logging:
-  backup_count: 5
   max_log_size: 10485760
   level: INFO
-orchestrator:
-  task_timeout: 300
-  max_recursion_depth: 5
-  subtask_timeout: 120
+  backup_count: 5
+agents:
+  grisha:
+    vision_model: gpt-4o
+    strategy_model: raptor-mini
+    max_tokens: 1500
+    temperature: 0.3
+  atlas:
+    model: gpt-5-mini
+    max_tokens: 2000
+    temperature: 0.7
+  tetyana:
+    reasoning_model: gpt-4.1
+    model: gpt-4.1
+    max_tokens: 2000
+    temperature: 0.5
+    reflexion_model: gpt-4.1
 mcp:
-  whisper:
-    language: uk
+  # === TIER 1: MUST-HAVE (Ядро системи) ===
+  filesystem:
+    deny_write_paths: []
+    model: gpt-4.1
+    repo_write_allowed_subdir: .atlastrinity_runtime
+    allowed_paths:
+    - /Users/dev
     enabled: true
-    model: large-v3-turbo
-
-
-  terminal:
-    max_command_length: 1000
-    command_timeout: 60
-    enabled: true
-    model: gpt-4o
+    deny_write_repo: true
 
   sequential_thinking:
     enabled: true
     max_history_size: 1000
-  duckduckgo_search:
+  computer_use:
+    screenshot_delay: 0.5
+    model: gpt-4o
     enabled: true
-  github:
+  # === TIER 2: HIGH (Рекомендовані) ===
+  git:
     enabled: true
+  vibe:
+    enabled: true
+    binary: vibe
+    timeout_s: 300
+    max_output_chars: 200000
+    disallow_interactive: true
   memory:
     enabled: true
-  time:
+  playwright:
+    model: gpt-4o
     enabled: true
-  git:
+    headless: false
+  # === TIER 3: MEDIUM (За потреби) ===
+  applescript:
+    enabled: false
+  github:
+    enabled: true
+  duckduckgo_search:
     enabled: true
   fetch:
     enabled: true
-
-
-  context7:
+  brave_search:
     enabled: true
+  # === TIER 4: OPTIONAL (Вимкнені) ===
   docker:
     enabled: true
   postgres:
-    enabled: true
+    enabled: false
   slack:
-    enabled: true
+    enabled: false
+  context7:
+    enabled: false
+  whisper:
+    model: large-v3-turbo
+    enabled: false
+    language: uk
+  puppeteer:
+    enabled: false
+  time:
+    enabled: false
+orchestrator:
+  task_timeout: 300
+  max_recursion_depth: 5
+  subtask_timeout: 120
 security:
-  require_confirmation: true
   dangerous_commands:
   - rm -rf
   - mkfs
   - dd if=
   - ':(){ :|:& };:'
-voice:
-  stt:
-    language: uk
-    model: large-v3-turbo
-    device: mps
-  tts:
-    enabled: true
-    engine: ukrainian-tts
-    device: mps
+  require_confirmation: true
+api:
+  timeout: 60
+  retry_count: 3

@@ -4,18 +4,9 @@
 
 ## 📋 Доступні тести
 
-### Whisper STT
+### STT & Whisper
 - **test_whisper_mps.py** - Тест Whisper на MPS (Apple Silicon GPU) vs CPU
-  ```bash
-  python tests/test_whisper_mps.py
-  ```
-  Порівнює швидкість завантаження моделі на CPU та MPS.
-
-- **verify_whisper.py** - Комплексна верифікація Whisper STT (25 тестів)
-  ```bash
-  python tests/verify_whisper.py
-  ```
-  Перевіряє конфігурацію, директорії, імпорти та інтеграцію.
+- **verify_whisper.py** (in scripts/) - Колишній скрипт верифікації, тепер у папці scripts/.
 
 ### Agents
 - **test_copilot.py** - Тест GitHub Copilot провайдера

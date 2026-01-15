@@ -33,6 +33,16 @@ class SharedContext:
     active_project: str = ""
     last_successful_path: str = ""
 
+    # System environment context
+    home_directory: str = ACTUAL_HOME
+    applications_directory: str = "/Applications"
+    documents_directory: str = f"{ACTUAL_HOME}/Documents"
+    downloads_directory: str = f"{ACTUAL_HOME}/Downloads"
+    desktop_directory: str = f"{ACTUAL_HOME}/Desktop"
+    
+    # Execution context
+    is_packaged: bool = False
+
     # File tracking
     recent_files: List[str] = field(default_factory=list)
     created_directories: List[str] = field(default_factory=list)
@@ -44,6 +54,10 @@ class SharedContext:
     available_tools_summary: str = ""
 
     def __post_init__(self):
+        # Detect if application is packaged (binary/app mode)
+        import sys
+        self.is_packaged = getattr(sys, "frozen", False)
+        
         # Auto-detect CWD on startup
         try:
             cwd = os.getcwd()
@@ -132,7 +146,7 @@ class SharedContext:
             return self.get_best_path()
 
         # Check for valid absolute path
-        if not raw_path.startswith("/Users"):
+        if not raw_path.startswith("/Users") and not raw_path.startswith("/Applications"):
             # Relative path - prepend working directory
             return f"{self.current_working_directory}/{raw_path.lstrip('/')}"
 
@@ -145,6 +159,14 @@ class SharedContext:
             "project": self.active_project,
             "last_path": self.last_successful_path,
             "recent_files": self.recent_files[-5:],
+            "system_paths": {
+                "home": self.home_directory,
+                "applications": self.applications_directory,
+                "documents": self.documents_directory,
+                "downloads": self.downloads_directory,
+                "desktop": self.desktop_directory
+            },
+            "is_packaged": self.is_packaged,
             "operation_count": self.operation_count,
             "last_op": self.last_operation,
         }

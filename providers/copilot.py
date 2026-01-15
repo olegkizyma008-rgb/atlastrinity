@@ -336,6 +336,18 @@ class CopilotLLM(BaseChatModel):
         **kwargs: Any,
     ) -> ChatResult:
         """Asynchronous generation using httpx with automatic model fallback on 400 errors"""
+        import tenacity
+        
+        # Use tenacity for retrying on network errors
+        @tenacity.retry(
+            stop=tenacity.stop_after_attempt(3),
+            wait=tenacity.wait_exponential(multiplier=1, min=2, max=10),
+            retry=tenacity.retry_if_exception_type((httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError, httpx.RemoteProtocolError)),
+            reraise=True
+        )
+        async def _do_post(client, url, headers, json):
+            return await client.post(url, headers=headers, json=json)
+
         try:
             session_token, api_endpoint = self._get_session_token()
             api_endpoint = "https://api.githubcopilot.com"
@@ -348,39 +360,39 @@ class CopilotLLM(BaseChatModel):
             }
             payload = self._build_payload(messages)
             
-            async with httpx.AsyncClient(timeout=120.0) as client:
-                response = await client.post(
-                    f"{api_endpoint}/chat/completions",
-                    headers=headers,
-                    json=payload
-                )
+            async with httpx.AsyncClient(timeout=httpx.Timeout(120.0, connect=30.0)) as client:
+                try:
+                    response = await _do_post(client, f"{api_endpoint}/chat/completions", headers, payload)
+                except Exception as e:
+                    print(f"[COPILOT] Primary request failed after retries: {e}", flush=True)
+                    raise
                 
                 if response.status_code == 400:
                     error_detail = response.text
                     print(f"[COPILOT] Async 400 error. Content: {error_detail[:500]}", flush=True)
                     print(f"[COPILOT] Retrying with gpt-4.1...", flush=True)
-                    # Clean payload for safe retry (remove vision/images)
-                    if "Copilot-Vision-Request" in headers:
-                        headers.pop("Copilot-Vision-Request")
                     
-                    if "messages" in payload:
+                    # Clean headers and payload for fallback
+                    headers_fb = headers.copy()
+                    if "Copilot-Vision-Request" in headers_fb:
+                        headers_fb.pop("Copilot-Vision-Request")
+                    
+                    payload_fb = payload.copy()
+                    if "messages" in payload_fb:
                         cleaned_messages = []
-                        for msg in payload["messages"]:
+                        for msg in payload_fb["messages"]:
                             content = msg.get("content")
                             if isinstance(content, list):
                                 text_only = " ".join([item.get("text", "") for item in content if isinstance(item, dict) and item.get("type") == "text"])
                                 cleaned_messages.append({**msg, "content": text_only or "[Image removed for fallback]"})
                             else:
                                 cleaned_messages.append(msg)
-                        payload["messages"] = cleaned_messages
+                        payload_fb["messages"] = cleaned_messages
                     
-                    payload["model"] = "gpt-4o"
+                    payload_fb["model"] = "gpt-4.1" # Using official stable model
                     
-                    retry_response = await client.post(
-                        f"{api_endpoint}/chat/completions",
-                        headers=headers,
-                        json=payload
-                    )
+                    retry_response = await _do_post(client, f"{api_endpoint}/chat/completions", headers_fb, payload_fb)
+                    
                     if retry_response.status_code != 200:
                         print(f"[COPILOT] Fallback failed. Status: {retry_response.status_code}, Body: {retry_response.text}", flush=True)
                     retry_response.raise_for_status()

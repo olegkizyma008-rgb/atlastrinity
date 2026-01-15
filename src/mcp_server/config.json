@@ -113,7 +113,7 @@
         "@modelcontextprotocol/server-puppeteer"
       ],
       "description": "Browser automation (navigate, click, type, screenshot)",
-      "disabled": false,
+      "disabled": true,
       "tier": 2,
       "agents": [
         "tetyana"
@@ -126,7 +126,7 @@
         "@modelcontextprotocol/server-playwright"
       ],
       "description": "Advanced browser automation and testing",
-      "disabled": false,
+      "disabled": true,
       "tier": 2,
       "agents": [
         "tetyana"
