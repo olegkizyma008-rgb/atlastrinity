@@ -43,11 +43,7 @@ mcp:
     - /Users/dev
     enabled: true
     deny_write_repo: true
-  terminal:
-    model: gpt-4o
-    command_timeout: 60
-    max_command_length: 1000
-    enabled: true
+
   sequential_thinking:
     enabled: true
     max_history_size: 1000

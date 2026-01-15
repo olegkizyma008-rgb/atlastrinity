@@ -8,7 +8,17 @@ AVAILABLE REALMS (MCP Servers):
 TIER 1 - CORE:
 - terminal: Shell access. Tool: execute_command.
 - filesystem: File operations. Tools: read_file, write_file, list_directory.
-- macos-use: Native UI automation and screenshots (Swift binary). PREFERRED for all computer interaction.
+- macos-use: **PRIORITY SWIFT BINARY** - Native macOS control for ALL computer interaction.
+  Tools:
+    - `macos-use_open_application_and_traverse`: Open apps. Args: identifier (app name/path/bundleID)
+    - `macos-use_click_and_traverse`: Click at coordinates. Args: pid (int), x (float), y (float)
+    - `macos-use_type_and_traverse`: Type text. Args: pid (int), text (string)
+    - `macos-use_press_key_and_traverse`: Press keys. Args: pid (int), keyName (string), modifierFlags (optional array like ["Command", "Shift"])
+    - `macos-use_refresh_traversal`: Refresh UI tree. Args: pid (int)
+    - `macos-use_take_screenshot`: Native macOS Screenshot. Returns Base64 PNG. No args.
+    - `macos-use_analyze_screen`: Apple Vision OCR. Returns text/coordinates JSON. No args.
+    - `execute_command`: Native Terminal. Args: command (string)
+  ALWAYS use this server for GUI automation and Terminal - it is compiled Swift and runs locally!
 - sequential-thinking: Step-by-step reasoning for complex decisions.
 
 TIER 2 - HIGH PRIORITY:

@@ -237,7 +237,11 @@ class Grisha:
 
         preferred_servers = []
         if use_mcp:
-            preferred_servers = swift_servers if swift_servers else servers
+            # ALWAYS prioritize macos-use for UI-related verification
+            if "macos-use" in servers:
+                preferred_servers = ["macos-use"] + [s for s in swift_servers if s != "macos-use"]
+            else:
+                preferred_servers = swift_servers if swift_servers else servers
 
         rationale = (
             f"visual_needed={visual_needed}, system_needed={system_needed}, "
@@ -742,7 +746,40 @@ Timestamp: {timestamp}
         from PIL import Image  # noqa: E402
 
         from ..config import SCREENSHOTS_DIR  # noqa: E402
+        from ..mcp_manager import mcp_manager  # noqa: E402
 
+        # 1. Try Native Swift MCP first (fastest, most reliable)
+        try:
+             # Check if macos-use is active
+             if "macos-use" in mcp_manager.config.get("mcpServers", {}):
+                 result = await mcp_manager.call_tool("macos-use", "macos-use_take_screenshot", {})
+                 
+                 # Result might be a dict with content->text (base64) OR direct base64 string depending on how call_tool processes it
+                 base64_img = None
+                 if isinstance(result, dict) and "content" in result:
+                     for item in result["content"]:
+                         if item.get("type") == "text":
+                             base64_img = item.get("text")
+                             break
+                 elif hasattr(result, "content"): # prompt object
+                      if len(result.content) > 0 and hasattr(result.content[0], "text"):
+                           base64_img = result.content[0].text
+                           
+                 if base64_img:
+                      # Save to file for consistency with rest of pipeline
+                      os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
+                      timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                      path = os.path.join(SCREENSHOTS_DIR, f"vision_mcp_{timestamp}.png")
+                      
+                      with open(path, "wb") as f:
+                          f.write(base64.b64decode(base64_img))
+                          
+                      logger.info(f"[GRISHA] Screenshot taken via MCP macos-use: {path}")
+                      return path
+        except Exception as e:
+            logger.warning(f"[GRISHA] MCP screenshot failed, falling back to local Quartz: {e}")
+
+        # 2. Local Fallback (Quartz/Screencapture)
         try:
             Quartz = None
             quartz_available = False

@@ -722,11 +722,10 @@ def main():
     print_info("Доступні MCP сервери:")
     print("  - memory: Граф знань (Atlas, Grisha, Tetyana)")
     print("  - notes: Текстові нотатки та звіти (Atlas, Grisha, Tetyana)")
-    print("  - terminal: Команди shell (Tetyana)")
+    print("  - macos-use: Нативний контроль macOS + Термінал (Tetyana, Grisha)")
     print("  - vibe: Coding Agent & Self-Healing (Atlas)")
     print("  - filesystem: Файлові операції (Tetyana, Grisha)")
     print("  - sequential-thinking: Глибоке мислення (Grisha)")
-    print("  - macos-use: Нативний контроль macOS (Tetyana, Grisha)")
     print("=" * 60 + "\n")
 
 

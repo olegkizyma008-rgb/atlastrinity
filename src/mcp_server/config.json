@@ -4,159 +4,230 @@
     "macos-use": {
       "command": "${PROJECT_ROOT}/vendor/mcp-server-macos-use/.build/release/mcp-server-macos-use",
       "connect_timeout": 60,
-      "description": "Native macOS control: mouse, keyboard, UI automation, screenshots",
+      "description": "Native macOS control: mouse, keyboard, UI automation, screenshots, Vision (OCR), and terminal command execution (Replaces 'terminal')",
       "permissions": {
         "accessibility": true,
         "screen_recording": true
       },
       "disabled": false,
       "tier": 1,
-      "agents": ["tetyana", "grisha"],
-      "note": "Requires swift build in vendor/mcp-server-macos-use"
+      "agents": [
+        "tetyana",
+        "grisha"
+      ],
+      "note": "Requires swift build in vendor/mcp-server-macos-use. Acts as the original MCP for system control."
     },
     "filesystem": {
       "command": "npx",
-      "args": ["@modelcontextprotocol/server-filesystem@2025.12.18", "${HOME}", "/tmp"],
+      "args": [
+        "@modelcontextprotocol/server-filesystem@2025.12.18",
+        "${HOME}",
+        "/tmp"
+      ],
       "description": "Official filesystem operations (pinned to @modelcontextprotocol/server-filesystem@2025.12.18 for reproducibility)",
       "disabled": false,
       "tier": 1,
-      "agents": ["tetyana", "grisha"]
-    },
-    "terminal": {
-      "command": "python3",
-      "connect_timeout": 30,
-      "args": ["-m", "src.mcp_server.terminal_server"],
-      "description": "Terminal command execution with CWD persistence",
-      "disabled": false,
-      "tier": 1,
-      "agents": ["tetyana"]
+      "agents": [
+        "tetyana",
+        "grisha"
+      ]
     },
     "sequential-thinking": {
       "command": "bunx",
       "connect_timeout": 60,
-      "args": ["@modelcontextprotocol/server-sequential-thinking"],
+      "args": [
+        "@modelcontextprotocol/server-sequential-thinking"
+      ],
       "env": {
         "MAX_HISTORY_SIZE": "1000"
       },
       "description": "Dynamic problem-solving through thought sequences (Critical for Grisha)",
       "disabled": false,
       "tier": 1,
-      "agents": ["atlas", "tetyana", "grisha"]
+      "agents": [
+        "atlas",
+        "tetyana",
+        "grisha"
+      ]
     },
     "_comment_tier2": "=== TIER 2: HIGH PRIORITY (Рекомендовані) ===",
     "chrome-devtools": {
       "command": "bunx",
-      "args": ["chrome-devtools-mcp@latest"],
+      "args": [
+        "chrome-devtools-mcp@latest"
+      ],
       "description": "Chrome DevTools Protocol for browser automation",
       "disabled": false,
       "tier": 2,
-      "agents": ["tetyana"]
+      "agents": [
+        "tetyana"
+      ]
     },
     "git": {
       "command": "python3",
       "connect_timeout": 60,
-      "args": ["-m", "src.mcp_server.git_server"],
+      "args": [
+        "-m",
+        "src.mcp_server.git_server"
+      ],
       "description": "Git operations for local repositories",
       "disabled": false,
       "tier": 2,
-      "agents": ["tetyana"]
+      "agents": [
+        "tetyana"
+      ]
     },
     "vibe": {
       "command": "python3",
       "connect_timeout": 60,
-      "args": ["-m", "src.mcp_server.vibe_server"],
+      "args": [
+        "-m",
+        "src.mcp_server.vibe_server"
+      ],
       "description": "Mistral AI-powered CLI for self-healing, debugging, code review, and smart planning. Tools: vibe_prompt, vibe_analyze_error, vibe_code_review, vibe_smart_plan, vibe_ask. All output visible in logs.",
       "disabled": false,
       "tier": 2,
-      "agents": ["atlas", "tetyana", "grisha"],
+      "agents": [
+        "atlas",
+        "tetyana",
+        "grisha"
+      ],
       "note": "Runs in programmatic CLI mode (--output json), not interactive TUI. Max output: 500KB."
     },
     "fetch": {
       "command": "bunx",
-      "args": ["mcp-server-fetch-typescript"],
+      "args": [
+        "mcp-server-fetch-typescript"
+      ],
       "description": "Fetch content from URLs (HTML to Markdown)",
       "disabled": false,
       "tier": 2,
-      "agents": ["tetyana"]
+      "agents": [
+        "tetyana"
+      ]
     },
     "puppeteer": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-puppeteer"],
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-puppeteer"
+      ],
       "description": "Browser automation (navigate, click, type, screenshot)",
       "disabled": false,
       "tier": 2,
-      "agents": ["tetyana"]
+      "agents": [
+        "tetyana"
+      ]
     },
     "playwright": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-playwright"],
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-playwright"
+      ],
       "description": "Advanced browser automation and testing",
       "disabled": false,
       "tier": 2,
-      "agents": ["tetyana"]
+      "agents": [
+        "tetyana"
+      ]
     },
     "memory": {
       "command": "python3",
       "connect_timeout": 60,
-      "args": ["-m", "src.mcp_server.memory_server"],
+      "args": [
+        "-m",
+        "src.mcp_server.memory_server"
+      ],
       "description": "Knowledge graph for persistent memory",
       "disabled": false,
       "tier": 2,
-      "agents": ["atlas", "tetyana"]
+      "agents": [
+        "atlas",
+        "tetyana"
+      ]
     },
     "notes": {
       "command": "python3",
       "connect_timeout": 60,
-      "args": ["-m", "src.mcp_server.notes_server"],
+      "args": [
+        "-m",
+        "src.mcp_server.notes_server"
+      ],
       "description": "Structured note-taking for agent feedback and reporting",
       "disabled": false,
       "tier": 2,
-      "agents": ["tetyana", "grisha"]
+      "agents": [
+        "tetyana",
+        "grisha"
+      ]
     },
     "_comment_tier3": "=== TIER 3: MEDIUM (За потреби) ===",
     "apple-mcp": {
       "command": "bunx",
-      "args": ["--no-cache", "apple-mcp@latest"],
+      "args": [
+        "--no-cache",
+        "apple-mcp@latest"
+      ],
       "description": "Integration with Apple apps (Calendar, Reminders, etc.)",
       "disabled": false,
       "tier": 3,
-      "agents": ["tetyana"]
+      "agents": [
+        "tetyana"
+      ]
     },
     "github": {
       "command": "python3",
       "connect_timeout": 60,
-      "args": ["-m", "src.mcp_server.github_server"],
+      "args": [
+        "-m",
+        "src.mcp_server.github_server"
+      ],
       "env": {
         "GITHUB_TOKEN": "${GITHUB_TOKEN}"
       },
       "description": "GitHub repository management",
       "disabled": false,
       "tier": 3,
-      "agents": ["tetyana"]
+      "agents": [
+        "tetyana"
+      ]
     },
     "duckduckgo-search": {
       "command": "python3",
       "connect_timeout": 60,
-      "args": ["-m", "src.mcp_server.duckduckgo_search_server"],
+      "args": [
+        "-m",
+        "src.mcp_server.duckduckgo_search_server"
+      ],
       "description": "Web search with DuckDuckGo (no API key required)",
       "disabled": false,
       "tier": 3,
-      "agents": ["tetyana"]
+      "agents": [
+        "tetyana"
+      ]
     },
     "_comment_tier4": "=== TIER 4: OPTIONAL (Вимкнені за замовчуванням) ===",
     "context7": {
       "command": "bunx",
       "connect_timeout": 120,
-      "args": ["@buggyhunter/context7-mcp"],
+      "args": [
+        "@buggyhunter/context7-mcp"
+      ],
       "description": "Developer documentation access (Enable for coding tasks)",
       "disabled": false,
       "tier": 4,
-      "agents": ["tetyana"]
+      "agents": [
+        "tetyana"
+      ]
     },
     "whisper-stt": {
       "command": "python3",
       "connect_timeout": 120,
-      "args": ["-m", "src.mcp_server.whisper_server"],
+      "args": [
+        "-m",
+        "src.mcp_server.whisper_server"
+      ],
       "env": {
         "WHISPER_MODEL": "small",
         "WHISPER_DEVICE": "mps"
@@ -164,35 +235,48 @@
       "description": "Speech-to-text using OpenAI Whisper (Enable for voice input)",
       "disabled": false,
       "tier": 4,
-      "agents": ["atlas"],
+      "agents": [
+        "atlas"
+      ],
       "note": "Use smaller models for local MPS; consider cloud STT for higher accuracy"
     },
     "docker": {
       "command": "npx",
       "connect_timeout": 60,
-      "args": ["@thelord/mcp-server-docker-npx@0.4.0"],
+      "args": [
+        "@thelord/mcp-server-docker-npx@0.4.0"
+      ],
       "env": {
         "DOCKER_HOST": "unix:///var/run/docker.sock"
       },
       "description": "Docker container management (npx-based) — prefer pinned package for reproducibility",
       "disabled": false,
       "tier": 4,
-      "agents": ["tetyana"],
+      "agents": [
+        "tetyana"
+      ],
       "note": "Set DOCKER_HOST for custom setups if not using the default Docker socket"
     },
     "postgres": {
       "command": "bunx",
       "connect_timeout": 180,
-      "args": ["@modelcontextprotocol/server-postgres", "postgresql://localhost/postgres"],
+      "args": [
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://localhost/postgres"
+      ],
       "description": "PostgreSQL database access (Enable for DB tasks)",
       "disabled": false,
       "tier": 4,
-      "agents": ["tetyana"]
+      "agents": [
+        "tetyana"
+      ]
     },
     "slack": {
       "command": "bunx",
       "connect_timeout": 120,
-      "args": ["@modelcontextprotocol/server-slack"],
+      "args": [
+        "@modelcontextprotocol/server-slack"
+      ],
       "env": {
         "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}",
         "SLACK_TEAM_ID": "${SLACK_TEAM_ID}"
@@ -200,26 +284,37 @@
       "description": "Slack integration (Enable for team communication)",
       "disabled": false,
       "tier": 4,
-      "agents": ["tetyana"],
+      "agents": [
+        "tetyana"
+      ],
       "requires_setup": "Configure Slack tokens"
     },
     "graph": {
       "command": "python3",
       "connect_timeout": 60,
-      "args": ["-m", "src.mcp_server.graph_server"],
+      "args": [
+        "-m",
+        "src.mcp_server.graph_server"
+      ],
       "description": "Knowledge Graph visualization and export",
       "disabled": false,
       "tier": 4,
-      "agents": ["atlas"]
+      "agents": [
+        "atlas"
+      ]
     },
     "time": {
       "command": "bunx",
       "connect_timeout": 60,
-      "args": ["@mcpcentral/mcp-time"],
+      "args": [
+        "@mcpcentral/mcp-time"
+      ],
       "description": "Time and timezone utilities",
       "disabled": false,
       "tier": 4,
-      "agents": ["tetyana"]
+      "agents": [
+        "tetyana"
+      ]
     }
   },
   "_metadata": {

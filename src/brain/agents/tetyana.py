@@ -77,11 +77,50 @@ class Tetyana:
     - Asking Atlas for help when stuck
     """
 
+    # MACOS-USE TOOL SCHEMAS (Swift Binary Priority)
+    # Ensures 100% correct argument handling for native macOS automation
+    MACOS_USE_SCHEMAS = {
+        "macos-use_open_application_and_traverse": {
+            "required": ["identifier"],
+            "types": {"identifier": str},
+        },
+        "macos-use_click_and_traverse": {
+            "required": ["pid", "x", "y"],
+            "types": {"pid": int, "x": (int, float), "y": (int, float)},
+        },
+        "macos-use_type_and_traverse": {
+            "required": ["pid", "text"],
+            "types": {"pid": int, "text": str},
+        },
+        "macos-use_press_key_and_traverse": {
+            "required": ["pid", "keyName"],
+            "optional": ["modifierFlags"],
+            "types": {"pid": int, "keyName": str, "modifierFlags": list},
+        },
+        "macos-use_refresh_traversal": {
+            "required": ["pid"],
+            "types": {"pid": int},
+        },
+        "execute_command": {
+            "required": ["command"],
+            "types": {"command": str},
+        },
+        "macos-use_take_screenshot": {
+            "required": [],
+            "types": {},
+        },
+        "macos-use_analyze_screen": {
+            "required": [],
+            "types": {},
+        },
+    }
+
     NAME = AgentPrompts.TETYANA["NAME"]
     DISPLAY_NAME = AgentPrompts.TETYANA["DISPLAY_NAME"]
     VOICE = AgentPrompts.TETYANA["VOICE"]
     COLOR = AgentPrompts.TETYANA["COLOR"]
     SYSTEM_PROMPT = AgentPrompts.TETYANA["SYSTEM_PROMPT"]
+
 
     def __init__(self, model_name: str = "grok-code-fast-1"):
         # Get model config (config.yaml > parameter > env variables)
@@ -103,10 +142,17 @@ class Tetyana:
         self.reasoning_llm = CopilotLLM(model_name=reasoning_model)
         self.reflexion_llm = CopilotLLM(model_name=reflexion_model)
 
+        # NEW: Vision model for complex GUI tasks (screenshot analysis)
+        vision_model = agent_config.get("vision_model") or os.getenv("VISION_MODEL", "gpt-4o")
+        self.vision_llm = CopilotLLM(model_name=vision_model, vision_model_name=vision_model)
+
         self.temperature = agent_config.get("temperature", 0.5)
         self.current_step: int = 0
         self.results: List[StepResult] = []
         self.attempt_count: int = 0
+        
+        # Track current PID for Vision analysis
+        self._current_pid: Optional[int] = None
 
     async def get_grisha_feedback(self, step_id: int) -> Optional[str]:
         """Retrieve Grisha's detailed rejection report from notes or memory"""
@@ -215,6 +261,170 @@ class Tetyana:
 
         return None
 
+    async def _take_screenshot_for_vision(self, pid: int = None) -> Optional[str]:
+        """Take screenshot for Vision analysis, optionally focusing on specific app."""
+        from ..logger import logger  # noqa: E402
+        import subprocess  # noqa: E402
+        import base64
+        from datetime import datetime  # noqa: E402
+        from ..config import SCREENSHOTS_DIR  # noqa: E402
+
+        try:
+            # Create screenshots directory if needed
+            os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
+            
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            path = os.path.join(SCREENSHOTS_DIR, f"vision_{timestamp}.png")
+            
+            # If PID provided, try to focus that app first
+            if pid:
+                try:
+                    focus_script = f'''
+                    tell application "System Events"
+                        set frontProcess to first process whose unix id is {pid}
+                        set frontmost of frontProcess to true
+                    end tell
+                    '''
+                    subprocess.run(["osascript", "-e", focus_script], capture_output=True, timeout=5)
+                    await asyncio.sleep(0.3)  # Wait for focus
+                except Exception as e:
+                    logger.warning(f"[TETYANA] Could not focus app {pid}: {e}")
+            
+            # 1. Try MCP Tool first (Native Swift)
+            try:
+                # We need to construct a lightweight call since we are inside Tetyana agent class, 
+                # but we have access to mcp_manager via import
+                if "macos-use" in mcp_manager.config.get("mcpServers", {}):
+                     result = await mcp_manager.call_tool("macos-use", "macos-use_take_screenshot", {})
+                     
+                     base64_img = None
+                     if isinstance(result, dict) and "content" in result:
+                         for item in result["content"]:
+                             if item.get("type") == "text":
+                                 base64_img = item.get("text")
+                                 break
+                     elif hasattr(result, "content") and len(result.content) > 0:
+                          if hasattr(result.content[0], "text"):
+                               base64_img = result.content[0].text
+                               
+                     if base64_img:
+                          with open(path, "wb") as f:
+                              f.write(base64.b64decode(base64_img))
+                          logger.info(f"[TETYANA] Screenshot for Vision saved via MCP: {path}")
+                          return path
+            except Exception as e:
+                logger.warning(f"[TETYANA] MCP screenshot failed, falling back: {e}")
+
+            # 2. Fallback to screencapture
+            result = subprocess.run(
+                ["screencapture", "-x", path],
+                capture_output=True,
+                timeout=10
+            )
+            
+            if result.returncode == 0 and os.path.exists(path):
+                logger.info(f"[TETYANA] Screenshot for Vision saved (fallback): {path}")
+                return path
+            else:
+                logger.error(f"[TETYANA] Screenshot failed: {result.stderr.decode()}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"[TETYANA] Screenshot error: {e}")
+            return None
+
+    async def analyze_screen(self, query: str, pid: int = None) -> Dict[str, Any]:
+        """
+        Take screenshot and analyze with Vision to find UI elements.
+        Used for complex GUI tasks where Accessibility Tree is insufficient.
+        
+        Args:
+            query: What to look for (e.g., "Find the 'Next' button")
+            pid: Optional PID to focus app before screenshot
+            
+        Returns:
+            {"found": bool, "elements": [...], "current_state": str, "suggested_action": {...}}
+        """
+        from langchain_core.messages import HumanMessage, SystemMessage  # noqa: E402
+        from ..logger import logger  # noqa: E402
+        import base64  # noqa: E402
+
+        logger.info(f"[TETYANA] Vision analysis requested: {query}")
+        
+        # Use provided PID or tracked PID
+        effective_pid = pid or self._current_pid
+        
+        # 1. Take screenshot
+        screenshot_path = await self._take_screenshot_for_vision(effective_pid)
+        if not screenshot_path:
+            return {"found": False, "error": "Could not take screenshot"}
+        
+        # 2. Load and encode image
+        try:
+            with open(screenshot_path, "rb") as f:
+                image_data = base64.b64encode(f.read()).decode("utf-8")
+        except Exception as e:
+            return {"found": False, "error": f"Could not read screenshot: {e}"}
+        
+        # 3. Vision analysis prompt
+        vision_prompt = f"""Analyze this macOS screenshot to help with: {query}
+
+You are assisting with GUI automation. Identify clickable elements, their positions, and suggest the best action.
+
+Respond in JSON format:
+{{
+    "found": true/false,
+    "elements": [
+        {{
+            "type": "button|link|textfield|checkbox|menu",
+            "label": "Element text or description",
+            "x": 350,
+            "y": 420,
+            "confidence": 0.95
+        }}
+    ],
+    "current_state": "Brief description of what's visible on screen",
+    "suggested_action": {{
+        "tool": "macos-use_click_and_traverse",
+        "args": {{"pid": {effective_pid or 'null'}, "x": 350, "y": 420}}
+    }},
+    "notes": "Any important observations (CAPTCHA detected, page loading, etc.)"
+}}
+
+IMPORTANT:
+- Coordinates should be approximate center of the element
+- If you see a CAPTCHA or verification challenge, note it in "notes"
+- If the target element is not visible, set "found": false and explain in "current_state"
+"""
+        
+        content = [
+            {"type": "text", "text": vision_prompt},
+            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_data}"}}
+        ]
+        
+        messages = [
+            SystemMessage(content="You are a Vision assistant for macOS GUI automation. Analyze screenshots precisely and provide accurate element coordinates."),
+            HumanMessage(content=content),
+        ]
+        
+        try:
+            response = await self.vision_llm.ainvoke(messages)
+            result = self._parse_response(response.content)
+            
+            if result.get("found"):
+                logger.info(f"[TETYANA] Vision found elements: {len(result.get('elements', []))}")
+                logger.info(f"[TETYANA] Current state: {result.get('current_state', '')[:100]}...")
+            else:
+                logger.warning(f"[TETYANA] Vision did not find target: {result.get('current_state', 'Unknown')}")
+            
+            # Store screenshot path for Grisha verification
+            result["screenshot_path"] = screenshot_path
+            return result
+            
+        except Exception as e:
+            logger.error(f"[TETYANA] Vision analysis failed: {e}")
+            return {"found": False, "error": str(e), "screenshot_path": screenshot_path}
+
     def _get_dynamic_temperature(self, attempt: int) -> float:
         """Dynamic temperature: 0.1 + attempt * 0.2, capped at 1.0"""
         return min(0.1 + (attempt * 0.2), 1.0)
@@ -301,6 +511,40 @@ Please type your response below and press Enter:
         if not shared_context.available_tools_summary:
             logger.info("[TETYANA] Fetching fresh MCP catalog for context...")
             shared_context.available_tools_summary = await mcp_manager.get_mcp_catalog()
+
+        # --- PHASE 0.5: VISION ANALYSIS (if required) ---
+        # When step has requires_vision=true, use Vision to find UI elements
+        vision_result = None
+        if step.get("requires_vision") and attempt <= 2:
+            logger.info("[TETYANA] Step requires Vision analysis for UI element discovery...")
+            query = step.get("action", "Find the next interaction target")
+            
+            # Try to get PID from step args or tracked state
+            step_pid = None
+            if step.get("args") and isinstance(step.get("args"), dict):
+                step_pid = step["args"].get("pid")
+            
+            vision_result = await self.analyze_screen(query, step_pid or self._current_pid)
+            
+            if vision_result.get("found") and vision_result.get("suggested_action"):
+                suggested = vision_result["suggested_action"]
+                logger.info(f"[TETYANA] Vision suggests action: {suggested}")
+                
+                # If Vision found the element, we can use its suggestion directly
+                # This will be used in the tool_call below
+            elif vision_result.get("notes"):
+                # Check for CAPTCHA or other blockers
+                notes = vision_result.get("notes", "").lower()
+                if "captcha" in notes or "verification" in notes or "robot" in notes:
+                    logger.warning(f"[TETYANA] Vision detected blocker: {vision_result.get('notes')}")
+                    return StepResult(
+                        step_id=step.get("id", self.current_step),
+                        success=False,
+                        result="Vision detected CAPTCHA or verification challenge",
+                        voice_message="Виявлено CAPTCHA або перевірку. Потрібна допомога користувача.",
+                        error=f"Blocker detected: {vision_result.get('notes')}",
+                        screenshot_path=vision_result.get("screenshot_path"),
+                    )
 
         # Fetch Grisha's feedback for retry attempts
         grisha_feedback = ""
@@ -391,6 +635,24 @@ Please type your response below and press Enter:
                         or {"action": step.get("action"), "path": step.get("path")},
                     }
                 )
+                
+                # VISION OVERRIDE: If Vision found the element with high confidence, use its suggestion
+                if vision_result and vision_result.get("found") and vision_result.get("suggested_action"):
+                    suggested = vision_result["suggested_action"]
+                    # Merge Vision's coordinates into tool_call args
+                    if suggested.get("args"):
+                        if not isinstance(tool_call.get("args"), dict):
+                            tool_call["args"] = {}
+                        # Update with Vision-provided coordinates
+                        for key in ["x", "y", "pid"]:
+                            if key in suggested["args"] and suggested["args"][key] is not None:
+                                tool_call["args"][key] = suggested["args"][key]
+                                logger.info(f"[TETYANA] Vision override: {key}={suggested['args'][key]}")
+                        # If Vision suggests a specific tool, consider using it
+                        if suggested.get("tool") and "click" in suggested["tool"].lower():
+                            tool_call["name"] = suggested["tool"]
+                            tool_call["server"] = "macos-use"
+                            logger.info(f"[TETYANA] Vision override: tool={suggested['tool']}")
             except Exception as e:
                 logger.warning(f"[TETYANA] Internal Monologue failed: {e}")
                 tool_call = {
@@ -978,30 +1240,10 @@ Please type your response below and press Enter:
                         )
 
                 if mcp_tool == "screenshot":
-                    # Fallback to native screenshot since macos-use has no such tool
-                    logger.info(
-                        "[TETYANA] Falling back to native screencapture for macos-use.screenshot"
-                    )
-                    try:
-                        import subprocess  # noqa: E402
-                        import tempfile  # noqa: E402
-                        from datetime import datetime  # noqa: E402
-
-                        screen_path = os.path.join(
-                            tempfile.gettempdir(),
-                            f"screen_{datetime.now().strftime('%H%M%S')}.png",
-                        )
-                        subprocess.run(["screencapture", "-x", screen_path], check=True)
-                        return {
-                            "success": True,
-                            "output": f"Screenshot saved to {screen_path}",
-                            "path": screen_path,
-                        }
-                    except Exception as e:
-                        return {
-                            "success": False,
-                            "error": f"Failed to take screenshot: {e}",
-                        }
+                    mcp_tool = "macos-use_take_screenshot"
+                
+                if mcp_tool in ["analyze", "vision", "ocr", "analyze_screen"]:
+                    mcp_tool = "macos-use_analyze_screen"
 
             # Common server-to-default-tool mappings
             default_map = {
@@ -1056,10 +1298,84 @@ Please type your response below and press Enter:
 
             return {"success": False, "error": error_msg}
 
+    def _validate_macos_use_args(self, tool_name: str, args: Dict) -> Dict:
+        """Validate and normalize arguments for macos-use Swift binary tools"""
+        from ..logger import logger  # noqa: E402
+
+        if tool_name not in self.MACOS_USE_SCHEMAS:
+            return args
+
+        schema = self.MACOS_USE_SCHEMAS[tool_name]
+        validated = {}
+
+        # Check required args
+        for arg_name in schema.get("required", []):
+            if arg_name not in args:
+                logger.warning(f"[TETYANA] Missing required argument '{arg_name}' for {tool_name}")
+                # Try common aliases
+                aliases = {
+                    "identifier": ["app", "app_name", "application", "name"],
+                    "pid": ["process_id", "processId", "PID"],
+                    "text": ["content", "value", "string"],
+                    "keyName": ["key", "keyname", "key_name"],
+                    "x": ["X", "xCoord", "x_coord"],
+                    "y": ["Y", "yCoord", "y_coord"],
+                }
+                for alias in aliases.get(arg_name, []):
+                    if alias in args:
+                        validated[arg_name] = args[alias]
+                        logger.info(f"[TETYANA] Alias found: {alias} -> {arg_name}")
+                        break
+                else:
+                    raise ValueError(f"Missing required argument '{arg_name}' for {tool_name}")
+            else:
+                validated[arg_name] = args[arg_name]
+
+        # Copy optional args
+        for arg_name in schema.get("optional", []):
+            if arg_name in args:
+                validated[arg_name] = args[arg_name]
+
+        # Type coercion for pid (must be int)
+        if "pid" in validated and not isinstance(validated["pid"], int):
+            try:
+                validated["pid"] = int(validated["pid"])
+                logger.info(f"[TETYANA] Type coercion: pid -> int ({validated['pid']})")
+            except (ValueError, TypeError) as e:
+                raise ValueError(f"Invalid pid value: {validated['pid']}") from e
+
+        # Type coercion for coordinates (must be float)
+        for coord in ["x", "y"]:
+            if coord in validated:
+                try:
+                    validated[coord] = float(validated[coord])
+                    logger.info(f"[TETYANA] Type coercion: {coord} -> float ({validated[coord]})")
+                except (ValueError, TypeError) as e:
+                    raise ValueError(f"Invalid {coord} value: {validated[coord]}") from e
+
+        # Ensure modifierFlags is a list of strings
+        if "modifierFlags" in validated:
+            flags = validated["modifierFlags"]
+            if isinstance(flags, str):
+                validated["modifierFlags"] = [flags]
+            elif not isinstance(flags, list):
+                validated["modifierFlags"] = []
+
+        return validated
+
     async def _call_mcp_direct(self, server: str, tool: str, args: Dict) -> Dict[str, Any]:
+        from ..logger import logger  # noqa: E402
         from ..mcp_manager import mcp_manager  # noqa: E402
 
         try:
+            # MACOS-USE VALIDATION: Ensure correct argument types for Swift binary
+            if server == "macos-use":
+                try:
+                    args = self._validate_macos_use_args(tool, args)
+                    logger.info(f"[TETYANA] Validated macos-use args: {args}")
+                except ValueError as ve:
+                    return {"success": False, "error": f"Argument validation failed: {ve}"}
+
             res = await mcp_manager.call_tool(server, tool, args)
             return self._format_mcp_result(res)
         except Exception as e:
@@ -1081,7 +1397,8 @@ Please type your response below and press Enter:
             }
 
         # Pass all args to the tool (supports cwd, stdout_file, etc.)
-        res = await mcp_manager.call_tool("terminal", "execute_command", args)
+        # OPTIMIZATION: Use 'macos-use' server which now handles terminal commands natively
+        res = await mcp_manager.call_tool("macos-use", "execute_command", args)
         return self._format_mcp_result(res)
 
     async def _perform_gui_action(self, args: Dict[str, Any]) -> Dict[str, Any]:
