@@ -159,7 +159,7 @@ class SystemConfig:
             "mcp": {
                 "terminal": {"enabled": True},
                 "filesystem": {"enabled": True},
-                "computer_use": {"enabled": True},
+                "macos-use": {"enabled": True},
             },
             "security": {
                 "dangerous_commands": ["rm -r", "mkfs"],

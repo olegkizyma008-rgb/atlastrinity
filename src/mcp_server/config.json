@@ -106,32 +106,7 @@
         "tetyana"
       ]
     },
-    "puppeteer": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-puppeteer"
-      ],
-      "description": "Browser automation (navigate, click, type, screenshot)",
-      "disabled": true,
-      "tier": 2,
-      "agents": [
-        "tetyana"
-      ]
-    },
-    "playwright": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-playwright"
-      ],
-      "description": "Advanced browser automation and testing",
-      "disabled": true,
-      "tier": 2,
-      "agents": [
-        "tetyana"
-      ]
-    },
+
     "memory": {
       "command": "python3",
       "connect_timeout": 60,
