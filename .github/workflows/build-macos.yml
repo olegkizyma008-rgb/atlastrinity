@@ -59,7 +59,7 @@ jobs:
           lipo -info vendor/mcp-server-macos-use/.build/release/mcp-server-macos-use
 
       - name: Upload Swift binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: mcp-server-macos-use-binary
           path: vendor/mcp-server-macos-use/.build/release/mcp-server-macos-use
@@ -106,7 +106,7 @@ jobs:
           tar -czf dist_venv.tar.gz dist_venv/
 
       - name: Upload Python venv
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: python-venv
           path: dist_venv.tar.gz
@@ -204,14 +204,14 @@ jobs:
           fi
 
       - name: Upload DMG artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: AtlasTrinity-macOS-${{ github.sha }}
           path: release/*.dmg
           retention-days: 30
 
       - name: Upload build logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: build-logs

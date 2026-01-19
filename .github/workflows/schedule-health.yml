@@ -64,7 +64,7 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/src
 
       - name: Upload health report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: health-report-${{ github.run_number }}
@@ -115,7 +115,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload security reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: security-reports-${{ github.run_number }}
@@ -157,7 +157,7 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/src
 
       - name: Upload benchmark results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: benchmarks-${{ github.run_number }}
@@ -319,7 +319,7 @@ jobs:
           cat health-summary.md
 
       - name: Upload summary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: health-summary
           path: health-summary.md
