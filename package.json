@@ -67,7 +67,7 @@
     "cloudinary": "^2.8.0",
     "mcp-sequentialthinking-tools": "^0.0.4",
     "mcp-server-fetch-typescript": "^0.1.1",
-    "react": "^18.2.0",
+    "react": "^19.2.3",
     "react-dom": "^18.2.0",
     "stripe": "^20.1.1"
   },
